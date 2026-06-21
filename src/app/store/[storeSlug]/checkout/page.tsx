@@ -44,6 +44,7 @@ export default async function CheckoutPage({
       slug={store.slug}
       currency={store.currency}
       accent={store.primaryColor}
+      locale={store.locale}
       deliveryMethods={delivery.length ? delivery : [{ method: "PICKUP", label: "Recoger en tienda", fee: 0 }]}
       paymentMethods={payment.length ? payment : [{ method: "CASH", label: "Efectivo" }]}
     />

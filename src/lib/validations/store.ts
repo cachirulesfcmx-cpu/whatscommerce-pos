@@ -20,6 +20,7 @@ export const storeSettingsSchema = z.object({
   primaryColor: z.string().optional(),
   accentColor: z.string().optional(),
   templateKey: z.string().optional(),
+  locale: z.enum(["es", "en"]).optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   deliveryMethods: z.array(z.any()).optional(),

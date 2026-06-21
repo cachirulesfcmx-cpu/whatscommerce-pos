@@ -36,6 +36,7 @@ export function OnboardingWizard({
     primaryColor: "#16a34a",
   });
 
+  const [sampleData, setSampleData] = React.useState(true);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   async function finish() {
@@ -46,12 +47,17 @@ export function OnboardingWizard({
       body: JSON.stringify(form),
     });
     const json = await res.json();
-    setLoading(false);
     if (!res.ok) {
+      setLoading(false);
       toast({ variant: "destructive", title: "Error", description: json?.error?.message });
       return;
     }
-    toast({ variant: "success", title: "¡Tienda lista!", description: "Empieza a agregar productos." });
+    // Optional: preload sample catalog for the chosen business type
+    if (sampleData) {
+      await fetch("/api/stores/sample-data", { method: "POST" }).catch(() => {});
+    }
+    setLoading(false);
+    toast({ variant: "success", title: "¡Tienda lista!", description: sampleData ? "Cargamos productos de ejemplo para empezar." : "Empieza a agregar productos." });
     router.push("/dashboard/products");
     router.refresh();
   }
@@ -155,6 +161,23 @@ export function OnboardingWizard({
                   </button>
                 ))}
               </div>
+            )}
+
+            {step === 2 && (
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={sampleData}
+                  onChange={(e) => setSampleData(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">Precargar productos de ejemplo de mi giro</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Te dejamos categorías y productos demo listos para editar. Podrás borrarlos cuando quieras.
+                  </span>
+                </span>
+              </label>
             )}
           </motion.div>
         </AnimatePresence>

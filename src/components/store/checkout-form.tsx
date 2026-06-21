@@ -10,20 +10,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { formatMoney, cn } from "@/lib/utils";
 import { useCart } from "@/store/cart";
+import { getDict } from "@/lib/i18n";
 
 interface Method { method: string; label: string; fee?: number }
 
 export function CheckoutForm({
-  storeId, slug, currency, accent, deliveryMethods, paymentMethods,
+  storeId, slug, currency, accent, deliveryMethods, paymentMethods, locale,
 }: {
   storeId: string;
   slug: string;
   currency: string;
   accent: string;
+  locale?: string | null;
   deliveryMethods: Method[];
   paymentMethods: Method[];
 }) {
   const { toast } = useToast();
+  const t = getDict(locale);
   const { lines, clear, token } = useCart();
   const subtotal = useCart((s) => s.subtotal());
 
@@ -38,15 +41,26 @@ export function CheckoutForm({
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const shipping = Number(deliveryMethods.find((d) => d.method === delivery)?.fee ?? 0);
 
-  // Track cart for abandoned-cart / conversion analytics (best-effort)
+  // Track cart for abandoned-cart recovery (best-effort).
+  // Re-fires when the customer fills in contact info so recovery has a destination.
+  const trackTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     if (lines.length === 0) return;
-    fetch("/api/cart/track", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storeId, token, subtotal, items: lines }),
-    }).catch(() => {});
+    if (trackTimer.current) clearTimeout(trackTimer.current);
+    trackTimer.current = setTimeout(() => {
+      fetch("/api/cart/track", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId, token, subtotal, items: lines,
+          customerName: form.name || null,
+          customerPhone: form.phone || null,
+          customerEmail: form.email || null,
+        }),
+      }).catch(() => {});
+    }, 600);
+    return () => { if (trackTimer.current) clearTimeout(trackTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [form.name, form.phone, form.email, lines.length]);
 
   let discount = 0;
   if (appliedCoupon) {
@@ -75,7 +89,7 @@ export function CheckoutForm({
 
   async function submit() {
     if (!form.name || !form.phone) {
-      toast({ variant: "destructive", title: "Faltan datos", description: "Nombre y teléfono son obligatorios." });
+      toast({ variant: "destructive", title: t.missingData, description: t.missingDataDesc });
       return;
     }
     setLoading(true);
@@ -119,22 +133,19 @@ export function CheckoutForm({
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 text-center">
         <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-bold">¡Pedido recibido!</h1>
+        <h1 className="mt-4 text-2xl font-bold">{t.orderReceived}</h1>
         <p className="mt-1 text-muted-foreground">
-          Tu pedido <span className="font-semibold">#{success.number}</span> fue creado.
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Envía el resumen por WhatsApp para confirmar con la tienda.
+          <span className="font-semibold">#{success.number}</span> {t.orderCreated}
         </p>
         {success.waLink && (
           <Button asChild className="mt-6 w-full bg-[#25D366] text-white hover:bg-[#1eb959]">
             <a href={success.waLink} target="_blank" rel="noreferrer">
-              <MessageCircle className="h-5 w-5" /> Enviar pedido por WhatsApp
+              <MessageCircle className="h-5 w-5" /> {t.sendViaWhatsApp}
             </a>
           </Button>
         )}
         <Button asChild variant="ghost" className="mt-3">
-          <Link href={`/store/${slug}`}>Volver a la tienda</Link>
+          <Link href={`/store/${slug}`}>{t.backToStore}</Link>
         </Button>
       </div>
     );
@@ -143,8 +154,8 @@ export function CheckoutForm({
   if (lines.length === 0) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 text-center">
-        <h1 className="text-xl font-bold">Tu carrito está vacío</h1>
-        <Button asChild variant="brand" className="mt-4"><Link href={`/store/${slug}`}>Ir a la tienda</Link></Button>
+        <h1 className="text-xl font-bold">{t.emptyCart}</h1>
+        <Button asChild variant="brand" className="mt-4"><Link href={`/store/${slug}`}>{t.goToStore}</Link></Button>
       </div>
     );
   }
@@ -152,24 +163,24 @@ export function CheckoutForm({
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <Button asChild variant="ghost" size="sm" className="mb-4">
-        <Link href={`/store/${slug}`}><ArrowLeft className="h-4 w-4" /> Seguir comprando</Link>
+        <Link href={`/store/${slug}`}><ArrowLeft className="h-4 w-4" /> {t.keepShopping}</Link>
       </Button>
-      <h1 className="text-2xl font-bold">Finalizar pedido</h1>
+      <h1 className="text-2xl font-bold">{t.checkout}</h1>
 
       <div className="mt-6 space-y-5">
         {/* customer */}
         <Card><CardContent className="space-y-4 p-5">
-          <h2 className="font-semibold">Tus datos</h2>
+          <h2 className="font-semibold">{t.yourData}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label>Nombre *</Label><Input value={form.name} onChange={(e) => set("name", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Teléfono (WhatsApp) *</Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="5215512345678" /></div>
+            <div className="space-y-1.5"><Label>{t.name} *</Label><Input value={form.name} onChange={(e) => set("name", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>{t.phone} *</Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="5215512345678" /></div>
           </div>
-          <div className="space-y-1.5"><Label>Email (opcional)</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>{t.emailOptional}</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
         </CardContent></Card>
 
         {/* delivery */}
         <Card><CardContent className="space-y-3 p-5">
-          <h2 className="font-semibold">Entrega</h2>
+          <h2 className="font-semibold">{t.delivery}</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {deliveryMethods.map((d) => (
               <button key={d.method} onClick={() => setDelivery(d.method)} className={cn("rounded-xl border p-3 text-left text-sm", delivery === d.method && "ring-2 ring-primary")}>
@@ -180,15 +191,15 @@ export function CheckoutForm({
           </div>
           {needsAddress && (
             <div className="space-y-3 pt-2">
-              <div className="space-y-1.5"><Label>Dirección</Label><Input value={form.line1} onChange={(e) => set("line1", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Referencias</Label><Input value={form.references} onChange={(e) => set("references", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label>{t.address}</Label><Input value={form.line1} onChange={(e) => set("line1", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label>{t.references}</Label><Input value={form.references} onChange={(e) => set("references", e.target.value)} /></div>
             </div>
           )}
         </CardContent></Card>
 
         {/* payment */}
         <Card><CardContent className="space-y-3 p-5">
-          <h2 className="font-semibold">Pago</h2>
+          <h2 className="font-semibold">{t.payment}</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {paymentMethods.map((p) => (
               <button key={p.method} onClick={() => setPayment(p.method)} className={cn("rounded-xl border p-3 text-left text-sm", payment === p.method && "ring-2 ring-primary")}>
@@ -200,25 +211,25 @@ export function CheckoutForm({
 
         {/* coupon + notes */}
         <Card><CardContent className="space-y-3 p-5">
-          <h2 className="font-semibold">Cupón y notas</h2>
+          <h2 className="font-semibold">{t.couponAndNotes}</h2>
           <div className="flex gap-2">
-            <Input placeholder="Código de cupón" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} />
-            <Button variant="outline" onClick={applyCoupon}><Tag className="h-4 w-4" /> Aplicar</Button>
+            <Input placeholder={t.couponCode} value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} />
+            <Button variant="outline" onClick={applyCoupon}><Tag className="h-4 w-4" /> {t.apply}</Button>
           </div>
-          {appliedCoupon && <p className="text-xs text-emerald-600">Cupón {appliedCoupon.code} aplicado</p>}
-          <Textarea placeholder="Notas para la tienda (opcional)" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+          {appliedCoupon && <p className="text-xs text-emerald-600">{appliedCoupon.code} ✓</p>}
+          <Textarea placeholder={t.notesPlaceholder} value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </CardContent></Card>
 
         {/* summary */}
         <Card><CardContent className="space-y-2 p-5 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatMoney(subtotal, currency)}</span></div>
-          {discount > 0 && <div className="flex justify-between text-emerald-600"><span>Descuento</span><span>-{formatMoney(discount, currency)}</span></div>}
-          <div className="flex justify-between"><span className="text-muted-foreground">Envío</span><span>{freeShip ? "Gratis" : formatMoney(shipping, currency)}</span></div>
-          <div className="flex justify-between border-t pt-2 text-base font-bold"><span>Total</span><span>{formatMoney(total, currency)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t.subtotal}</span><span>{formatMoney(subtotal, currency)}</span></div>
+          {discount > 0 && <div className="flex justify-between text-emerald-600"><span>{t.discount}</span><span>-{formatMoney(discount, currency)}</span></div>}
+          <div className="flex justify-between"><span className="text-muted-foreground">{t.shipping}</span><span>{freeShip ? t.free : formatMoney(shipping, currency)}</span></div>
+          <div className="flex justify-between border-t pt-2 text-base font-bold"><span>{t.total}</span><span>{formatMoney(total, currency)}</span></div>
         </CardContent></Card>
 
         <Button onClick={submit} disabled={loading} className="w-full text-white" style={{ background: accent }} size="lg">
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />} Confirmar pedido
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />} {t.confirmOrder}
         </Button>
       </div>
     </div>

@@ -728,8 +728,10 @@ model Cart {
   subtotal   Decimal  @default(0) @db.Decimal(12, 2)
   customerName  String?
   customerPhone String?
+  customerEmail String?
   recoveredAt   DateTime?
   abandonedAt   DateTime?
+  remindedAt    DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

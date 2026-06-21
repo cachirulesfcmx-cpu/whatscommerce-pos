@@ -12,13 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { TEMPLATES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TEMPLATE_VARIABLES, DEFAULT_TEMPLATE_LABELS } from "@/lib/whatsapp/customer-messages";
+import { ThemePreview } from "@/components/dashboard/theme-preview";
+import { LOCALES } from "@/lib/i18n";
 
 export function SettingsPanel({
   defaultTab = "general", store, whatsapp, storeSlug,
 }: {
   defaultTab?: string;
   storeSlug?: string;
-  store: { name: string; description: string | null; logoUrl: string | null; bannerUrl: string | null; primaryColor: string; templateKey: string; seoTitle: string | null; seoDescription: string | null };
+  store: { name: string; description: string | null; logoUrl: string | null; bannerUrl: string | null; primaryColor: string; templateKey: string; locale?: string | null; seoTitle: string | null; seoDescription: string | null };
   whatsapp: { phone: string | null; displayName: string | null; notifyCustomer: boolean; templates?: Record<string, string> };
 }) {
   const router = useRouter();
@@ -37,7 +39,7 @@ export function SettingsPanel({
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: s.name, description: s.description, logoUrl: s.logoUrl || null, bannerUrl: s.bannerUrl || null,
-        primaryColor: s.primaryColor, templateKey: s.templateKey, seoTitle: s.seoTitle, seoDescription: s.seoDescription,
+        primaryColor: s.primaryColor, templateKey: s.templateKey, locale: s.locale ?? "es", seoTitle: s.seoTitle, seoDescription: s.seoDescription,
       }),
     });
     setSavingStore(false);
@@ -71,6 +73,16 @@ export function SettingsPanel({
           <Card><CardContent className="space-y-4 p-5">
             <div className="space-y-1.5"><Label>Nombre de la tienda</Label><Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} /></div>
             <div className="space-y-1.5"><Label>Descripción</Label><Textarea value={s.description ?? ""} onChange={(e) => setS({ ...s, description: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>Idioma de la tienda</Label>
+              <select
+                value={s.locale ?? "es"}
+                onChange={(e) => setS({ ...s, locale: e.target.value })}
+                className="h-10 w-full max-w-[220px] rounded-lg border bg-background px-3 text-sm"
+              >
+                {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground">Idioma de la tienda pública y el checkout.</p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Logo (URL)</Label><Input value={s.logoUrl ?? ""} onChange={(e) => setS({ ...s, logoUrl: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Banner (URL)</Label><Input value={s.bannerUrl ?? ""} onChange={(e) => setS({ ...s, bannerUrl: e.target.value })} /></div>
@@ -92,7 +104,7 @@ export function SettingsPanel({
                 {TEMPLATES.map((t) => (
                   <button key={t.key} type="button" onClick={() => setS({ ...s, templateKey: t.key, primaryColor: t.color })}
                     className={cn("rounded-xl border p-2 text-left", s.templateKey === t.key && "ring-2 ring-primary")}>
-                    <div className="mb-1 h-8 rounded-md" style={{ background: t.color }} />
+                    <ThemePreview templateKey={t.key} className="mb-1.5" />
                     <span className="text-xs">{t.name}</span>
                   </button>
                 ))}

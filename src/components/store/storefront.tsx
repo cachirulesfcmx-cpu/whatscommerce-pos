@@ -8,6 +8,7 @@ import { useCart } from "@/store/cart";
 import { normalizePhone, cn } from "@/lib/utils";
 import { getTemplate } from "@/lib/templates";
 import { FONTS } from "@/lib/fonts";
+import { getDict } from "@/lib/i18n";
 import type { StorefrontDTO } from "@/server/storefront";
 
 const GRID_COLS: Record<number, string> = {
@@ -21,6 +22,7 @@ export function Storefront({ store }: { store: StorefrontDTO }) {
   const [activeCat, setActiveCat] = React.useState<string | null>(null);
   const tpl = getTemplate(store.templateKey);
   const accent = store.primaryColor || tpl.accent;
+  const t = getDict(store.locale);
 
   React.useEffect(() => {
     setStore(store.id);
@@ -65,7 +67,7 @@ export function Storefront({ store }: { store: StorefrontDTO }) {
               className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition-all active:scale-95 ${!activeCat ? "text-white shadow-sm" : "hover:bg-muted"}`}
               style={!activeCat ? { background: accent, borderColor: accent } : {}}
             >
-              Todo
+              {t.allCategories}
             </button>
             {store.categories.map((c) => (
               <button
@@ -107,7 +109,7 @@ export function Storefront({ store }: { store: StorefrontDTO }) {
         </a>
       )}
 
-      <CartDrawer slug={store.slug} currency={store.currency} accent={accent} />
+      <CartDrawer slug={store.slug} currency={store.currency} accent={accent} dict={t} />
 
       {store.showBranding && (
         <footer className="container mt-12 text-center text-xs text-muted-foreground">

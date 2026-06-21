@@ -7,13 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney, cn } from "@/lib/utils";
 import { useCart } from "@/store/cart";
+import type { Dict } from "@/lib/i18n";
 
 export function CartDrawer({
-  slug, currency, accent,
+  slug, currency, accent, dict,
 }: {
   slug: string;
   currency: string;
   accent: string;
+  dict: Dict;
 }) {
   const [open, setOpen] = React.useState(false);
   const { lines, updateQty, removeLine } = useCart();
@@ -47,7 +49,7 @@ export function CartDrawer({
 
         <div className="flex-1 overflow-y-auto p-4">
           {lines.length === 0 ? (
-            <EmptyState icon={ShoppingCart} title="Tu carrito está vacío" description="Agrega productos para continuar." />
+            <EmptyState icon={ShoppingCart} title={dict.emptyCart} description="" />
           ) : (
             <ul className="space-y-3">
               {lines.map((l) => (
@@ -78,11 +80,11 @@ export function CartDrawer({
         {lines.length > 0 && (
           <div className="border-t p-4">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">{dict.subtotal}</span>
               <span className="text-lg font-bold">{formatMoney(subtotal, currency)}</span>
             </div>
             <Button asChild className="w-full text-white" style={{ background: accent }} onClick={() => setOpen(false)}>
-              <Link href={`/store/${slug}/checkout`}>Continuar al pedido</Link>
+              <Link href={`/store/${slug}/checkout`}>{dict.checkout}</Link>
             </Button>
           </div>
         )}

@@ -43,6 +43,7 @@ export function serializeStorefront(store: Storefront) {
     logoUrl: store.logoUrl,
     bannerUrl: store.bannerUrl,
     currency: store.currency,
+    locale: store.locale ?? "es",
     primaryColor: store.primaryColor,
     templateKey: store.templateKey,
     whatsappPhone: store.whatsappSettings?.phone ?? null,

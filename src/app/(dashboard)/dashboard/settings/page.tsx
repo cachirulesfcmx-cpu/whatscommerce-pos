@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   return (
     <SettingsPanel
       storeSlug={store.slug}
-      store={{ name: store.name, description: store.description, logoUrl: store.logoUrl, bannerUrl: store.bannerUrl, primaryColor: store.primaryColor, templateKey: store.templateKey, seoTitle: store.seoTitle, seoDescription: store.seoDescription }}
+      store={{ name: store.name, description: store.description, logoUrl: store.logoUrl, bannerUrl: store.bannerUrl, primaryColor: store.primaryColor, templateKey: store.templateKey, locale: store.locale, seoTitle: store.seoTitle, seoDescription: store.seoDescription }}
       whatsapp={{ phone: wa?.phone ?? null, displayName: wa?.displayName ?? null, notifyCustomer: wa?.notifyCustomer ?? false, templates: (wa?.templates as Record<string, string>) ?? {} }}
     />
   );

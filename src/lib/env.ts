@@ -24,6 +24,10 @@ const schema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),
+
+  // Secret guarding scheduled jobs (cart recovery, etc.). Sent as
+  // `Authorization: Bearer <CRON_SECRET>` or `?secret=` by the scheduler.
+  CRON_SECRET: z.string().optional(),
 });
 
 // On the client, only NEXT_PUBLIC_* are present; skip strict parsing there.
