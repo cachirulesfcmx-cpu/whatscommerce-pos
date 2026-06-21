@@ -63,7 +63,18 @@ export function ProductCard({
       <div className="relative aspect-square overflow-hidden bg-muted">
         {product.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+          <img
+            src={product.image}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.dataset.fallback) return;
+              img.dataset.fallback = "1";
+              img.src = `https://loremflickr.com/600/600/${encodeURIComponent(product.name)}/all?lock=7`;
+            }}
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground"><ImageIcon className="h-8 w-8" /></div>
         )}

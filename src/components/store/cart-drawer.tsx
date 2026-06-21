@@ -10,12 +10,13 @@ import { useCart } from "@/store/cart";
 import type { Dict } from "@/lib/i18n";
 
 export function CartDrawer({
-  slug, currency, accent, dict,
+  slug, currency, accent, dict, demo = false,
 }: {
   slug: string;
   currency: string;
   accent: string;
   dict: Dict;
+  demo?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const { lines, updateQty, removeLine } = useCart();
@@ -83,9 +84,18 @@ export function CartDrawer({
               <span className="text-muted-foreground">{dict.subtotal}</span>
               <span className="text-lg font-bold">{formatMoney(subtotal, currency)}</span>
             </div>
-            <Button asChild className="w-full text-white" style={{ background: accent }} onClick={() => setOpen(false)}>
-              <Link href={`/store/${slug}/checkout`}>{dict.checkout}</Link>
-            </Button>
+            {demo ? (
+              <>
+                <Button asChild className="w-full text-white" style={{ background: accent }}>
+                  <Link href="/register">Crear mi tienda gratis</Link>
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">Estás en una demo. Crea tu cuenta para recibir pedidos reales.</p>
+              </>
+            ) : (
+              <Button asChild className="w-full text-white" style={{ background: accent }} onClick={() => setOpen(false)}>
+                <Link href={`/store/${slug}/checkout`}>{dict.checkout}</Link>
+              </Button>
+            )}
           </div>
         )}
       </aside>

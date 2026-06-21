@@ -17,7 +17,7 @@ const GRID_COLS: Record<number, string> = {
   4: "lg:grid-cols-4",
 };
 
-export function Storefront({ store }: { store: StorefrontDTO }) {
+export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo?: boolean }) {
   const setStore = useCart((s) => s.setStore);
   const [activeCat, setActiveCat] = React.useState<string | null>(null);
   const tpl = getTemplate(store.templateKey);
@@ -36,6 +36,12 @@ export function Storefront({ store }: { store: StorefrontDTO }) {
 
   return (
     <div className={cn("min-h-screen bg-background pb-28", FONTS[tpl.font].className, tpl.dark && "dark")}>
+      {demo && (
+        <div className="sticky top-0 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-slate-900 px-4 py-2 text-center text-xs text-white">
+          <span>🎬 Demo de <strong>{store.name}</strong> — así se vería tu tienda</span>
+          <a href="/register" className="rounded-full bg-white px-3 py-0.5 font-semibold text-slate-900">Crear la mía gratis</a>
+        </div>
+      )}
       {/* banner / header */}
       <header className="relative">
         <div
@@ -109,7 +115,7 @@ export function Storefront({ store }: { store: StorefrontDTO }) {
         </a>
       )}
 
-      <CartDrawer slug={store.slug} currency={store.currency} accent={accent} dict={t} />
+      <CartDrawer slug={store.slug} currency={store.currency} accent={accent} dict={t} demo={demo} />
 
       {store.showBranding && (
         <footer className="container mt-12 text-center text-xs text-muted-foreground">

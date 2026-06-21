@@ -51,7 +51,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
               <Link href="/register">Empezar gratis <ArrowRight className="h-4 w-4" /></Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href={`/store/${ind.demoSlug}`} target="_blank">Ver tienda demo <Store className="h-4 w-4" /></Link>
+              <Link href={`/demo/${ind.slug}`} target="_blank">Ver demo de {ind.name.toLowerCase()} <Store className="h-4 w-4" /></Link>
             </Button>
           </div>
         </div>

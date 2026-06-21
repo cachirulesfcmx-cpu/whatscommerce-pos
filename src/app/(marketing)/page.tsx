@@ -7,6 +7,23 @@ import { Button } from "@/components/ui/button";
 import { PLAN_CONFIG, PLAN_ORDER } from "@/lib/plans/plans";
 import { formatMoney } from "@/lib/utils";
 import { INDUSTRIES, INDUSTRY_GROUPS } from "@/lib/industries";
+import { LandingNav } from "@/components/marketing/landing-nav";
+
+const IMG = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=560&h=420&q=80`;
+
+// Featured live demos shown in the "plantillas" showcase — each opens a full
+// industry-specific demo store.
+const FEATURED_DEMOS = [
+  { slug: "restaurantes", label: "Restaurante", emoji: "🍽️", img: IMG("photo-1517248135467-4c7edcad34c4") },
+  { slug: "cafeterias", label: "Cafetería", emoji: "☕", img: IMG("photo-1495474472287-4d71bcdd2085") },
+  { slug: "reposteria", label: "Repostería", emoji: "🧁", img: IMG("photo-1578985545062-69928b1d9587") },
+  { slug: "moda-y-ropa", label: "Boutique", emoji: "👗", img: IMG("photo-1490481651871-ab68de25d43d") },
+  { slug: "belleza", label: "Belleza & Spa", emoji: "💅", img: IMG("photo-1560066984-138dadb4c035") },
+  { slug: "joyeria-y-accesorios", label: "Joyería", emoji: "💍", img: IMG("photo-1515562141207-7a88fb7ce338") },
+  { slug: "electronica", label: "Electrónica", emoji: "📱", img: IMG("photo-1498049794561-7780e7231661") },
+  { slug: "floreria", label: "Florería", emoji: "🌸", img: IMG("photo-1561181286-d3fee7d55364") },
+  { slug: "servicios-profesionales", label: "Servicios", emoji: "💼", img: IMG("photo-1497366216548-37526070297c") },
+];
 
 export const metadata = {
   title: "WhatsCommerce POS — Vende por WhatsApp con catálogo y POS profesional",
@@ -56,51 +73,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl gradient-brand text-white"><ShoppingBag className="h-5 w-5" /></span>
-            WhatsCommerce
-          </Link>
-          <nav className="hidden items-center gap-8 text-sm text-slate-600 dark:text-slate-300 md:flex">
-            {/* Industrias mega-menu (CSS hover) */}
-            <div className="group relative">
-              <button className="flex items-center gap-1 py-5 hover:text-slate-900 dark:hover:text-white">
-                Industrias
-                <svg className="h-3.5 w-3.5 transition-transform group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
-              </button>
-              <div className="invisible absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-6 opacity-0 shadow-xl transition-all group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
-                <div className="grid grid-cols-3 gap-6">
-                  {INDUSTRY_GROUPS.map((group) => (
-                    <div key={group}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{group}</p>
-                      <ul className="space-y-1">
-                        {INDUSTRIES.filter((i) => i.group === group).slice(0, 6).map((i) => (
-                          <li key={i.slug}>
-                            <Link href={`/industria/${i.slug}`} className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
-                              <span>{i.emoji}</span> {i.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                <a href="#industrias" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">Ver todas las industrias →</a>
-              </div>
-            </div>
-            <a href="#como-funciona" className="hover:text-slate-900 dark:hover:text-white">Cómo funciona</a>
-            <a href="#funciones" className="hover:text-slate-900 dark:hover:text-white">Funciones</a>
-            <a href="#precios" className="hover:text-slate-900 dark:hover:text-white">Precios</a>
-            <a href="#faq" className="hover:text-slate-900 dark:hover:text-white">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 sm:block">Entrar</Link>
-            <Button asChild variant="brand" size="sm" className="rounded-full px-4"><Link href="/register">Empezar gratis</Link></Button>
-          </div>
-        </div>
-      </header>
+      <LandingNav />
 
       {/* Hero */}
       <section className="container grid items-center gap-12 py-20 md:grid-cols-2 md:py-28">
@@ -116,7 +89,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild variant="brand" size="lg" className="rounded-full px-6"><Link href="/register">Crear mi tienda gratis <ArrowRight className="h-4 w-4" /></Link></Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full px-6"><a href="#precios">Ver precios</a></Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full px-6"><Link href="/demo/restaurantes" target="_blank">Ver demo en vivo <Store className="h-4 w-4" /></Link></Button>
           </div>
           <p className="mt-4 text-sm text-slate-500">Gratis para siempre · Sin tarjeta de crédito</p>
         </div>
@@ -167,6 +140,40 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Live demos / templates showcase */}
+      <section id="plantillas" className="container py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Mira una demo real de tu giro</h2>
+          <p className="mt-3 text-slate-600 dark:text-slate-300">Cada demo usa una plantilla y productos pensados para esa industria. Ábrela y pruébala.</p>
+        </div>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURED_DEMOS.map((d) => (
+            <Link
+              key={d.slug}
+              href={`/demo/${d.slug}`}
+              target="_blank"
+              className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div className="relative h-44 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.img} alt={d.label} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <span className="absolute bottom-3 left-4 flex items-center gap-2 text-lg font-semibold text-white">
+                  <span>{d.emoji}</span> {d.label}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4 text-sm">
+                <span className="text-slate-500">Demo en vivo</span>
+                <span className="flex items-center gap-1 font-medium text-primary">Abrir <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></span>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <p className="mt-8 text-center text-sm text-slate-500">
+          ¿No ves tu giro? <a href="#industrias" className="font-medium text-primary hover:underline">Explora las {INDUSTRIES.length} industrias →</a>
+        </p>
+      </section>
+
       {/* Industries */}
       <section id="industrias" className="container py-20">
         <div className="mx-auto max-w-2xl text-center">
@@ -180,7 +187,7 @@ export default function LandingPage() {
               <ul className="mt-4 space-y-1">
                 {INDUSTRIES.filter((i) => i.group === group).map((i) => (
                   <li key={i.slug}>
-                    <Link href={`/industria/${i.slug}`} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white">
+                    <Link href={`/industria/${i.slug}`} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white">
                       <span>{i.emoji}</span> {i.name}
                       <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
                     </Link>
@@ -301,19 +308,45 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-100 py-10 dark:border-slate-800">
-        <div className="container flex flex-col items-center justify-between gap-4 text-sm text-slate-500 sm:flex-row">
-          <div className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-300">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg gradient-brand text-white"><ShoppingBag className="h-4 w-4" /></span>
-            WhatsCommerce POS
+      <footer className="border-t border-slate-100 py-14 dark:border-slate-800">
+        <div className="container grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl gradient-brand text-white"><ShoppingBag className="h-5 w-5" /></span>
+              WhatsCommerce
+            </div>
+            <p className="mt-3 max-w-xs text-sm text-slate-500">Tu tienda online que vende por WhatsApp. Sin comisiones por venta.</p>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link href="/login" className="hover:text-slate-900 dark:hover:text-white">Entrar</Link>
-            <Link href="/register" className="hover:text-slate-900 dark:hover:text-white">Empezar gratis</Link>
-            <Link href="/legal/terminos" className="hover:text-slate-900 dark:hover:text-white">Términos</Link>
-            <Link href="/legal/privacidad" className="hover:text-slate-900 dark:hover:text-white">Privacidad</Link>
+          <div>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Producto</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-500">
+              <li><a href="#funciones" className="hover:text-slate-900 dark:hover:text-white">Funciones</a></li>
+              <li><a href="#plantillas" className="hover:text-slate-900 dark:hover:text-white">Plantillas</a></li>
+              <li><a href="#precios" className="hover:text-slate-900 dark:hover:text-white">Precios</a></li>
+              <li><Link href="/demo/restaurantes" className="hover:text-slate-900 dark:hover:text-white">Ver demo</Link></li>
+            </ul>
           </div>
-          <p>© {new Date().getFullYear()} WhatsCommerce</p>
+          <div>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Industrias</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-500">
+              {INDUSTRIES.slice(0, 5).map((i) => (
+                <li key={i.slug}><Link href={`/industria/${i.slug}`} className="hover:text-slate-900 dark:hover:text-white">{i.name}</Link></li>
+              ))}
+              <li><a href="#industrias" className="font-medium text-primary hover:underline">Ver todas</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Cuenta</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-500">
+              <li><Link href="/login" className="hover:text-slate-900 dark:hover:text-white">Entrar</Link></li>
+              <li><Link href="/register" className="hover:text-slate-900 dark:hover:text-white">Empezar gratis</Link></li>
+              <li><Link href="/legal/terminos" className="hover:text-slate-900 dark:hover:text-white">Términos</Link></li>
+              <li><Link href="/legal/privacidad" className="hover:text-slate-900 dark:hover:text-white">Privacidad</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="container mt-10 border-t border-slate-100 pt-6 text-sm text-slate-400 dark:border-slate-800">
+          © {new Date().getFullYear()} WhatsCommerce · Hecho para vender por WhatsApp
         </div>
       </footer>
     </div>
