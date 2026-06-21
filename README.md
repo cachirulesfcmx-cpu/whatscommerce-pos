@@ -1,5 +1,7 @@
 # WhatsCommerce POS
 
+[![CI](https://github.com/cachirulesfcmx-cpu/whatscommerce-pos/actions/workflows/ci.yml/badge.svg)](https://github.com/cachirulesfcmx-cpu/whatscommerce-pos/actions/workflows/ci.yml)
+
 SaaS multi-tenant de **catálogo online + punto de venta (POS) + tienda web sincronizada con WhatsApp Business**. Inspirado en Take App, Shopify y Tiendanube, con identidad propia, arquitectura profesional y lista para producción.
 
 > Cualquier negocio se registra, crea su tienda, agrega productos, conecta WhatsApp y empieza a recibir pedidos con un ticket profesional — sin comisiones por venta.
