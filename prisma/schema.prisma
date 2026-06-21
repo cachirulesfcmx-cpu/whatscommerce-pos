@@ -1,0 +1,877 @@
+// ============================================================================
+//  WhatsCommerce POS — Prisma schema
+//  Multi-tenant SaaS: catálogo online + POS + tienda sincronizada con WhatsApp.
+//  Every tenant-scoped entity carries `storeId` and is indexed by it.
+//  Money is stored as Decimal(12,2); stock as Int.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ───────────────────────────── ENUMS ──────────────────────────────────────
+
+enum PlanTier {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+}
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  STAFF
+  CASHIER
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PREPARING
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+}
+
+enum OrderChannel {
+  STORE
+  POS
+  WHATSAPP
+  MANUAL
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+  PAYMENT_LINK
+  COD
+  QR
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentProvider {
+  MANUAL
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+}
+
+enum DeliveryMethod {
+  PICKUP
+  LOCAL_DELIVERY
+  OWN_DELIVERY
+  SHIPPING
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
+}
+
+enum DomainStatus {
+  PENDING
+  ACTIVE
+  ERROR
+}
+
+enum InventoryMovementType {
+  INITIAL
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  RETURN
+}
+
+enum WhatsAppMessageType {
+  NEW_ORDER
+  ORDER_CONFIRMED
+  ORDER_PAID
+  ORDER_PREPARING
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  CART_RECOVERY
+  ABANDONED_ORDER
+  PROMOTION
+}
+
+enum AutomationTrigger {
+  ORDER_CREATED
+  ORDER_CONFIRMED
+  ORDER_PAID
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  CART_ABANDONED
+  CUSTOMER_CREATED
+}
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum StoreStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+// ─────────────────────────── AUTH / USERS ─────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  isSuperAdmin  Boolean   @default(false)
+  phone         String?
+  locale        String    @default("es")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  staffRoles    Staff[]
+  auditLogs     AuditLog[]
+  ownedStores   Store[]    @relation("StoreOwner")
+}
+
+// Auth.js OAuth accounts
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ───────────────────────── PLANS & SUBSCRIPTIONS ──────────────────────────
+
+model Plan {
+  id              String   @id @default(cuid())
+  tier            PlanTier @unique
+  name            String
+  description     String?
+  priceMonthly    Decimal  @default(0) @db.Decimal(12, 2)
+  priceYearly     Decimal  @default(0) @db.Decimal(12, 2)
+  currency        String   @default("MXN")
+  stripePriceId   String?
+  // Limits (null = unlimited)
+  maxStores       Int?
+  maxProducts     Int?
+  maxImages       Int?
+  maxOrdersMonth  Int?
+  maxStaff        Int?
+  maxBranches     Int?
+  // Feature flags
+  features        Json     @default("{}")
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  storeId              String             @unique
+  planId               String
+  status               SubscriptionStatus @default(TRIALING)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialEndsAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  plan  Plan  @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([status])
+}
+
+// ──────────────────────────────── STORE ───────────────────────────────────
+
+model Store {
+  id            String      @id @default(cuid())
+  ownerId       String
+  name          String
+  slug          String      @unique // subdomain: <slug>.whatscommerce.com
+  description   String?     @db.Text
+  logoUrl       String?
+  bannerUrl     String?
+  businessType  String? // restaurant, cafe, bakery, clothing, beauty, services...
+  currency      String      @default("MXN")
+  country       String      @default("MX")
+  timezone      String      @default("America/Mexico_City")
+  locale        String      @default("es")
+  status        StoreStatus @default(ACTIVE)
+  onboarded     Boolean     @default(false)
+  templateKey   String      @default("minimal-store")
+  // theming
+  primaryColor  String      @default("#16a34a")
+  accentColor   String      @default("#0ea5e9")
+  fontFamily    String      @default("Inter")
+  // SEO / social
+  seoTitle      String?
+  seoDescription String?    @db.Text
+  ogImageUrl    String?
+  socials       Json        @default("{}")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  owner            User              @relation("StoreOwner", fields: [ownerId], references: [id])
+  settings         StoreSettings?
+  whatsappSettings WhatsAppSettings?
+  subscription     Subscription?
+  domains          Domain[]
+  branches         Branch[]
+  staff            Staff[]
+  categories       Category[]
+  products         Product[]
+  modifiers        Modifier[]
+  customers        Customer[]
+  orders           Order[]
+  coupons          Coupon[]
+  inventory        Inventory[]
+  inventoryMoves   InventoryMovement[]
+  automations      Automation[]
+  broadcasts       Broadcast[]
+  auditLogs        AuditLog[]
+  carts            Cart[]
+  usageCounters    UsageCounter[]
+  apiKeys          ApiKey[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model StoreSettings {
+  id               String   @id @default(cuid())
+  storeId          String   @unique
+  // delivery
+  deliveryMethods  Json     @default("[]") // [{ method, label, fee, minOrder, enabled }]
+  pickupAddress    String?
+  // payments accepted at checkout
+  paymentMethods   Json     @default("[]") // [{ method, label, instructions, enabled }]
+  // business hours
+  openingHours     Json     @default("{}") // { mon:[{open,close}], ... }
+  // misc
+  taxRate          Decimal  @default(0) @db.Decimal(5, 2)
+  taxIncluded      Boolean  @default(true)
+  showBranding     Boolean  @default(true) // platform branding (BASIC plan = true)
+  blockOutOfStock  Boolean  @default(false)
+  minOrderAmount   Decimal? @db.Decimal(12, 2)
+  orderPrefix      String   @default("WC")
+  nextOrderNumber  Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  address   String?
+  phone     String?
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store      Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  inventory  Inventory[]
+  orders     Order[]
+  movements  InventoryMovement[]
+
+  @@index([storeId])
+}
+
+model Domain {
+  id         String       @id @default(cuid())
+  storeId    String
+  host       String       @unique // mitienda.com
+  status     DomainStatus @default(PENDING)
+  isPrimary  Boolean      @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// ─────────────────────────── RBAC / STAFF ─────────────────────────────────
+
+model Staff {
+  id          String    @id @default(cuid())
+  storeId     String
+  userId      String
+  role        StaffRole @default(STAFF)
+  // granular per-module permission overrides; falls back to role defaults
+  permissions Json      @default("[]")
+  branchId    String?
+  isActive    Boolean   @default(true)
+  invitedAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([storeId])
+  @@index([userId])
+}
+
+// ────────────────────────── CATALOG / PRODUCTS ────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  storeId     String
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([storeId, slug])
+  @@index([storeId])
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  storeId         String
+  categoryId      String?
+  name            String
+  slug            String
+  description     String?     @db.Text
+  type            ProductType @default(PHYSICAL)
+  price           Decimal     @db.Decimal(12, 2)
+  compareAtPrice  Decimal?    @db.Decimal(12, 2) // precio rebajado (original)
+  sku             String?
+  trackInventory  Boolean     @default(false)
+  prepTimeMinutes Int?
+  isActive        Boolean     @default(true)
+  isFeatured      Boolean     @default(false)
+  tags            String[]    @default([])
+  // SEO
+  seoTitle        String?
+  seoDescription  String?
+  sortOrder       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  store       Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category    Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images      ProductImage[]
+  variants    Variant[]
+  modifiers   ModifierOnProduct[]
+  inventory   Inventory[]
+  orderItems  OrderItem[]
+
+  @@unique([storeId, slug])
+  @@index([storeId])
+  @@index([categoryId])
+  @@index([storeId, isActive])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// A variant = a concrete sellable combination (talla/color/sabor...) with its own price/stock.
+model Variant {
+  id             String   @id @default(cuid())
+  productId      String
+  name           String // "Talla M / Rojo"
+  sku            String?
+  price          Decimal? @db.Decimal(12, 2) // overrides product price if set
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options   VariantOption[]
+  inventory Inventory[]
+
+  @@index([productId])
+}
+
+// e.g. { type: "Talla", value: "M" }
+model VariantOption {
+  id        String @id @default(cuid())
+  variantId String
+  type      String
+  value     String
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
+// Extras / add-ons (queso extra, salsa, envoltura...) reusable across products.
+model Modifier {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String // "Extras", "Salsas"
+  required  Boolean  @default(false)
+  multiple  Boolean  @default(true) // allow multiple options selected
+  minSelect Int      @default(0)
+  maxSelect Int?
+  options   Json     @default("[]") // [{ id, name, price }]
+  createdAt DateTime @default(now())
+
+  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products ModifierOnProduct[]
+
+  @@index([storeId])
+}
+
+model ModifierOnProduct {
+  productId  String
+  modifierId String
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  modifier Modifier @relation(fields: [modifierId], references: [id], onDelete: Cascade)
+
+  @@id([productId, modifierId])
+}
+
+// ──────────────────────────── INVENTORY ───────────────────────────────────
+
+model Inventory {
+  id          String   @id @default(cuid())
+  storeId     String
+  productId   String?
+  variantId   String?
+  branchId    String?
+  quantity    Int      @default(0)
+  lowStockAt  Int      @default(5)
+  updatedAt   DateTime @updatedAt
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  branch  Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, variantId, branchId])
+  @@index([storeId])
+}
+
+model InventoryMovement {
+  id        String                @id @default(cuid())
+  storeId   String
+  productId String?
+  variantId String?
+  branchId  String?
+  type      InventoryMovementType
+  delta     Int // +/- change
+  reason    String?
+  reference String? // order id, etc.
+  createdAt DateTime              @default(now())
+
+  store  Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([productId])
+}
+
+// ─────────────────────────── CUSTOMERS / CRM ──────────────────────────────
+
+model Customer {
+  id              String   @id @default(cuid())
+  storeId         String
+  name            String
+  phone           String
+  email           String?
+  notes           String?  @db.Text
+  tags            String[] @default([])
+  marketingOptIn  Boolean  @default(false)
+  totalSpent      Decimal  @default(0) @db.Decimal(12, 2)
+  ordersCount     Int      @default(0)
+  lastOrderAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  addresses Address[]
+  orders    Order[]
+
+  @@unique([storeId, phone])
+  @@index([storeId])
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  customerId String
+  label      String?
+  line1      String
+  line2      String?
+  references String?
+  city       String?
+  state      String?
+  zip        String?
+  country    String  @default("MX")
+  isDefault  Boolean @default(false)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+// ───────────────────────────── ORDERS ─────────────────────────────────────
+
+model Order {
+  id             String         @id @default(cuid())
+  storeId        String
+  branchId       String?
+  customerId     String?
+  number         String // human friendly: WC-1001
+  status         OrderStatus    @default(NEW)
+  channel        OrderChannel   @default(STORE)
+  // snapshot of customer (storefront orders may not create a Customer immediately)
+  customerName   String
+  customerPhone  String
+  customerEmail  String?
+  // delivery
+  deliveryMethod DeliveryMethod @default(PICKUP)
+  deliveryAddress Json?         // snapshot
+  deliveryFee    Decimal        @default(0) @db.Decimal(12, 2)
+  // money
+  subtotal       Decimal        @db.Decimal(12, 2)
+  discount       Decimal        @default(0) @db.Decimal(12, 2)
+  tax            Decimal        @default(0) @db.Decimal(12, 2)
+  total          Decimal        @db.Decimal(12, 2)
+  currency       String         @default("MXN")
+  couponCode     String?
+  // payment
+  paymentMethod  PaymentMethod  @default(CASH)
+  paymentStatus  PaymentStatus  @default(PENDING)
+  // misc
+  notes          String?        @db.Text
+  assignedToId   String?
+  whatsappSentAt DateTime?
+  history        Json           @default("[]") // [{ at, status, by }]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  store    Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  branch   Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@unique([storeId, number])
+  @@index([storeId])
+  @@index([storeId, status])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  // snapshot fields (so historical orders stay correct if product changes)
+  name        String
+  variantName String?
+  extras      Json     @default("[]") // [{ name, price }]
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  quantity    Int
+  lineTotal   Decimal  @db.Decimal(12, 2)
+  notes       String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  orderId         String
+  provider        PaymentProvider @default(MANUAL)
+  method          PaymentMethod
+  status          PaymentStatus   @default(PENDING)
+  amount          Decimal         @db.Decimal(12, 2)
+  currency        String          @default("MXN")
+  providerRef     String? // stripe payment intent / checkout session
+  rawPayload      Json?
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// ──────────────────────── COUPONS / PROMOTIONS ────────────────────────────
+
+model Coupon {
+  id               String     @id @default(cuid())
+  storeId          String
+  code             String
+  type             CouponType
+  value            Decimal    @default(0) @db.Decimal(12, 2)
+  minOrderAmount   Decimal?   @db.Decimal(12, 2)
+  maxUses          Int?
+  usedCount        Int        @default(0)
+  perCustomerLimit Int?
+  startsAt         DateTime?
+  endsAt           DateTime?
+  appliesTo        Json       @default("{}") // { productIds:[], categoryIds:[] }
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, code])
+  @@index([storeId])
+}
+
+// ───────────────────────────── CART (server) ──────────────────────────────
+// Client carts live in localStorage; we persist a server copy for abandoned
+// cart recovery and POS handoff.
+
+model Cart {
+  id         String   @id @default(cuid())
+  storeId    String
+  token      String   @unique // matches client cookie
+  items      Json     @default("[]")
+  subtotal   Decimal  @default(0) @db.Decimal(12, 2)
+  customerName  String?
+  customerPhone String?
+  recoveredAt   DateTime?
+  abandonedAt   DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// ────────────────────────── WHATSAPP / TEMPLATES ──────────────────────────
+
+model WhatsAppSettings {
+  id            String   @id @default(cuid())
+  storeId       String   @unique
+  phone         String? // E.164 without +, used for wa.me
+  displayName   String?
+  language      String   @default("es")
+  notifyCustomer Boolean @default(false)
+  // Cloud API (optional)
+  cloudApiEnabled Boolean @default(false)
+  phoneNumberId String?
+  // message templates keyed by WhatsAppMessageType
+  templates     Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+// global template catalog managed by super admin
+model Template {
+  id          String   @id @default(cuid())
+  key         String   @unique // minimal-store, food-express...
+  name        String
+  description String?
+  previewUrl  String?
+  isPremium   Boolean  @default(false)
+  config      Json     @default("{}")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────── AUTOMATIONS / BROADCASTS ─────────────────────────
+
+model Automation {
+  id        String            @id @default(cuid())
+  storeId   String
+  name      String
+  trigger   AutomationTrigger
+  channel   String            @default("whatsapp")
+  template  WhatsAppMessageType?
+  delayMin  Int               @default(0)
+  isActive  Boolean           @default(true)
+  config    Json              @default("{}")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model Broadcast {
+  id          String          @id @default(cuid())
+  storeId     String
+  name        String
+  message     String          @db.Text
+  segment     Json            @default("{}")
+  status      BroadcastStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentCount   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// ────────────────────── PLATFORM / SECURITY / OPS ─────────────────────────
+
+// per-store, per-month usage counters for plan-limit enforcement
+model UsageCounter {
+  id       String @id @default(cuid())
+  storeId  String
+  period   String // YYYY-MM
+  metric   String // orders, broadcasts...
+  count    Int    @default(0)
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, period, metric])
+  @@index([storeId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  storeId    String?
+  userId     String?
+  action     String // product.create, order.update...
+  entityType String?
+  entityId   String?
+  metadata   Json     @default("{}")
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  store Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Public API keys (Enterprise). Only a SHA-256 hash is stored.
+model ApiKey {
+  id         String    @id @default(cuid())
+  storeId    String
+  name       String
+  prefix     String // first chars shown for identification (e.g. wc_live_ab12)
+  hashedKey  String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// idempotency + audit for inbound webhooks (Stripe, WhatsApp...)
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String // stripe, whatsapp
+  eventId     String
+  type        String?
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([provider])
+}
