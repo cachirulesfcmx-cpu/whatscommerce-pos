@@ -64,7 +64,32 @@ export default function LandingPage() {
             WhatsCommerce
           </Link>
           <nav className="hidden items-center gap-8 text-sm text-slate-600 dark:text-slate-300 md:flex">
-            <a href="#industrias" className="hover:text-slate-900 dark:hover:text-white">Industrias</a>
+            {/* Industrias mega-menu (CSS hover) */}
+            <div className="group relative">
+              <button className="flex items-center gap-1 py-5 hover:text-slate-900 dark:hover:text-white">
+                Industrias
+                <svg className="h-3.5 w-3.5 transition-transform group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+              </button>
+              <div className="invisible absolute left-1/2 top-full z-50 w-[640px] -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-6 opacity-0 shadow-xl transition-all group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+                <div className="grid grid-cols-3 gap-6">
+                  {INDUSTRY_GROUPS.map((group) => (
+                    <div key={group}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{group}</p>
+                      <ul className="space-y-1">
+                        {INDUSTRIES.filter((i) => i.group === group).slice(0, 6).map((i) => (
+                          <li key={i.slug}>
+                            <Link href={`/industria/${i.slug}`} className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
+                              <span>{i.emoji}</span> {i.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <a href="#industrias" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">Ver todas las industrias →</a>
+              </div>
+            </div>
             <a href="#como-funciona" className="hover:text-slate-900 dark:hover:text-white">Cómo funciona</a>
             <a href="#funciones" className="hover:text-slate-900 dark:hover:text-white">Funciones</a>
             <a href="#precios" className="hover:text-slate-900 dark:hover:text-white">Precios</a>
@@ -282,9 +307,11 @@ export default function LandingPage() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg gradient-brand text-white"><ShoppingBag className="h-4 w-4" /></span>
             WhatsCommerce POS
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/login" className="hover:text-slate-900 dark:hover:text-white">Entrar</Link>
             <Link href="/register" className="hover:text-slate-900 dark:hover:text-white">Empezar gratis</Link>
+            <Link href="/legal/terminos" className="hover:text-slate-900 dark:hover:text-white">Términos</Link>
+            <Link href="/legal/privacidad" className="hover:text-slate-900 dark:hover:text-white">Privacidad</Link>
           </div>
           <p>© {new Date().getFullYear()} WhatsCommerce</p>
         </div>

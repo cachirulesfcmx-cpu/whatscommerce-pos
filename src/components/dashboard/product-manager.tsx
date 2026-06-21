@@ -3,7 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Plus, Pencil, Trash2, Search, Boxes, Star, Loader2, X,
+  Plus, Pencil, Trash2, Search, Boxes, Star, Loader2, X, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,26 @@ export function ProductManager({
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ProductDTO | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [aiLoading, setAiLoading] = React.useState(false);
   const [form, setForm] = React.useState<ProductDTO>(empty);
+
+  async function generateImage() {
+    if (!form.name) return;
+    setAiLoading(true);
+    const prompt = [form.name, form.description].filter(Boolean).join(". ");
+    const res = await fetch("/api/ai/product-image", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const json = await res.json();
+    setAiLoading(false);
+    if (!res.ok) {
+      toast({ variant: "destructive", title: "IA no disponible", description: json?.error?.message ?? "Configura las claves de IA." });
+      return;
+    }
+    set("images", [{ url: json.data.url, alt: form.name, sortOrder: 0 }]);
+    toast({ variant: "success", title: "Imagen generada" });
+  }
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
   const atLimit = limit != null && products.length >= limit;
@@ -262,12 +281,21 @@ export function ProductManager({
             </div>
 
             <div className="space-y-2">
-              <Label>Imagen (URL)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Imagen (URL)</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={generateImage} disabled={aiLoading || !form.name}>
+                  {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Generar con IA
+                </Button>
+              </div>
               <Input
                 placeholder="https://…"
                 value={form.images[0]?.url ?? ""}
                 onChange={(e) => set("images", e.target.value ? [{ url: e.target.value, alt: form.name, sortOrder: 0 }] : [])}
               />
+              {form.images[0]?.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.images[0].url} alt="" className="mt-2 h-24 w-24 rounded-lg object-cover" />
+              )}
             </div>
 
             <div className="space-y-2">

@@ -4,6 +4,8 @@ import type { AppliedCoupon } from "@/lib/cart/pricing";
 import { validateCoupon } from "@/lib/cart/coupon";
 import { assertCanCreateOrder, incrementUsage } from "@/lib/plans/limits";
 import { buildOrderTicket, buildWaMeLink } from "@/lib/whatsapp/ticket";
+import { sendEmail, orderConfirmationEmail, isEmailEnabled } from "@/lib/email";
+import { env } from "@/lib/env";
 import {
   DELIVERY_METHOD_LABELS, PAYMENT_METHOD_LABELS,
 } from "@/lib/constants";
@@ -274,6 +276,20 @@ export async function createOrder({ storeId, input, channel, assignedToId }: Cre
 
   const businessPhone = store.whatsappSettings?.phone;
   const waLink = businessPhone ? buildWaMeLink(businessPhone, ticket) : null;
+
+  // Transactional email (no-op if Resend not configured) — fire-and-forget
+  if (input.customer.email && isEmailEnabled) {
+    const mail = orderConfirmationEmail({
+      storeName: store.name,
+      number: order.number,
+      customerName: input.customer.name,
+      currency: store.currency,
+      items: lineItems.map((li) => ({ name: li.name, quantity: li.quantity, lineTotal: li.lineTotal })),
+      total,
+      storeUrl: `${env.NEXT_PUBLIC_APP_URL}/store/${store.slug}`,
+    });
+    sendEmail({ to: input.customer.email, subject: mail.subject, html: mail.html }).catch(() => {});
+  }
 
   return { order, ticket, waLink };
 }
