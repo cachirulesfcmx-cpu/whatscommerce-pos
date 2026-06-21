@@ -119,6 +119,51 @@ export const INDUSTRIES: Industry[] = [
   { slug: "ticketing", group: "Servicios", name: "Boletos y eventos", emoji: "🎟️", accent: "#a855f7",
     headline: "Vende boletos para tus eventos", subcopy: "Tipos de boleto, cupos y confirmación por WhatsApp.",
     bullets: ["Tipos de boleto", "Control de cupo", "Confirmación al instante"], demoSlug: SERVICE },
+
+  // ---- F&B (más) ----
+  { slug: "food-truck", group: "F&B", name: "Food truck", emoji: "🚚", accent: "#ef4444",
+    headline: "Tu food truck con pedidos anticipados", subcopy: "Publica tu menú y ubicación; recibe pedidos para recoger sin filas.",
+    bullets: ["Menú del día", "Pedidos para recoger", "Ubicación del día"], demoSlug: FB },
+  { slug: "heladeria", group: "F&B", name: "Heladería", emoji: "🍦", accent: "#0ea5e9",
+    headline: "Vende helados y postres fríos en línea", subcopy: "Sabores, combos y entregas rápidas por WhatsApp.",
+    bullets: ["Sabores y tamaños", "Combos", "Entrega local"], demoSlug: FB },
+  { slug: "jugos", group: "F&B", name: "Jugos y smoothies", emoji: "🥤", accent: "#22c55e",
+    headline: "Jugos y smoothies a un mensaje", subcopy: "Menú saludable, suscripciones y pedidos por WhatsApp.",
+    bullets: ["Menú saludable", "Suscripción semanal", "Entrega a domicilio"], demoSlug: FB },
+
+  // ---- E-commerce (más) ----
+  { slug: "libreria", group: "E-commerce", name: "Librería y papelería", emoji: "📒", accent: "#f59e0b",
+    headline: "Vende libros y papelería en línea", subcopy: "Catálogo organizado, inventario y pedidos por WhatsApp.",
+    bullets: ["Catálogo por categoría", "Inventario", "Pedidos escolares"], demoSlug: SHOP },
+  { slug: "jugueteria", group: "E-commerce", name: "Juguetería", emoji: "🧸", accent: "#db2777",
+    headline: "Tu juguetería con tienda online", subcopy: "Productos por edad, ofertas y pedidos por WhatsApp.",
+    bullets: ["Filtros por edad", "Ofertas", "Envíos"], demoSlug: SHOP },
+  { slug: "deportes", group: "E-commerce", name: "Deportes y fitness", emoji: "🏋️", accent: "#0ea5e9",
+    headline: "Vende artículos deportivos", subcopy: "Tallas, marcas e inventario, con pedidos por WhatsApp.",
+    bullets: ["Variantes por talla", "Inventario", "Pagos con tarjeta"], demoSlug: SHOP },
+  { slug: "hogar-decoracion", group: "E-commerce", name: "Hogar y decoración", emoji: "🛋️", accent: "#7c3aed",
+    headline: "Decora hogares con tu tienda online", subcopy: "Catálogo visual, variantes y pedidos por WhatsApp.",
+    bullets: ["Galería atractiva", "Variantes", "Envío o recolección"], demoSlug: SHOP },
+  { slug: "floreria", group: "E-commerce", name: "Florería", emoji: "💐", accent: "#ec4899",
+    headline: "Vende arreglos florales en línea", subcopy: "Catálogo, pedidos personalizados y entregas el mismo día.",
+    bullets: ["Arreglos a medida", "Mensaje de regalo", "Entrega programada"], demoSlug: SHOP },
+
+  // ---- Servicios (más) ----
+  { slug: "fotografia", group: "Servicios", name: "Fotografía", emoji: "📷", accent: "#0ea5e9",
+    headline: "Vende sesiones y paquetes de foto", subcopy: "Paquetes, reservas y anticipos por WhatsApp.",
+    bullets: ["Paquetes de sesión", "Reservas", "Anticipos en línea"], demoSlug: SERVICE },
+  { slug: "eventos", group: "Servicios", name: "Eventos y fiestas", emoji: "🎉", accent: "#a855f7",
+    headline: "Organiza eventos y vende paquetes", subcopy: "Paquetes, cotizaciones y reservas por WhatsApp.",
+    bullets: ["Paquetes de evento", "Cotización", "Reservas con anticipo"], demoSlug: SERVICE },
+  { slug: "gimnasio", group: "Servicios", name: "Gimnasio y fitness", emoji: "💪", accent: "#16a34a",
+    headline: "Vende membresías y clases", subcopy: "Planes, clases y cobros recurrentes por WhatsApp.",
+    bullets: ["Membresías", "Clases y horarios", "Cobros recurrentes"], demoSlug: SERVICE },
+  { slug: "tatuajes", group: "Servicios", name: "Estudio de tatuajes", emoji: "🖋️", accent: "#111827",
+    headline: "Agenda citas y diseños de tatuaje", subcopy: "Portafolio, cotización y reservas por WhatsApp.",
+    bullets: ["Portafolio", "Cotización por diseño", "Reserva con anticipo"], demoSlug: SERVICE },
+  { slug: "reparaciones", group: "Servicios", name: "Reparaciones y técnico", emoji: "🔧", accent: "#f59e0b",
+    headline: "Recibe solicitudes de reparación", subcopy: "Servicios, diagnóstico y seguimiento por WhatsApp.",
+    bullets: ["Lista de servicios", "Diagnóstico", "Estatus de la reparación"], demoSlug: SERVICE },
 ];
 
 export const INDUSTRY_GROUPS: IndustryGroup[] = ["F&B", "E-commerce", "Servicios"];

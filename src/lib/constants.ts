@@ -11,6 +11,12 @@ export const TEMPLATES = [
   { key: "bold-modern", name: "Moderno audaz", premium: true, color: "#0ea5e9" },
   { key: "beauty-studio", name: "Beauty Studio", premium: true, color: "#a855f7" },
   { key: "local-market", name: "Local Market", premium: false, color: "#22c55e" },
+  { key: "midnight", name: "Midnight", premium: true, color: "#6366f1" },
+  { key: "pastel", name: "Pastel", premium: true, color: "#f472b6" },
+  { key: "industrial", name: "Industrial", premium: true, color: "#f59e0b" },
+  { key: "luxe", name: "Luxe", premium: true, color: "#d4af37" },
+  { key: "fresh", name: "Fresh", premium: false, color: "#10b981" },
+  { key: "ocean", name: "Ocean", premium: true, color: "#0891b2" },
 ] as const;
 
 export const BUSINESS_TYPES = [

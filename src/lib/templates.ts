@@ -77,6 +77,30 @@ export const TEMPLATE_CONFIGS: Record<string, TemplateConfig> = {
     key: "local-market", name: "Local Market", dark: false, hero: "gradient",
     columns: 3, cardRadius: "rounded-2xl", headingClass: "text-2xl font-bold", font: "dmsans", accent: "#22c55e",
   },
+  midnight: {
+    key: "midnight", name: "Midnight", dark: true, hero: "minimal",
+    columns: 4, cardRadius: "rounded-xl", headingClass: "text-3xl font-bold tracking-tight", font: "sora", accent: "#6366f1",
+  },
+  pastel: {
+    key: "pastel", name: "Pastel", dark: false, hero: "gradient",
+    columns: 3, cardRadius: "rounded-3xl", headingClass: "text-3xl font-semibold", font: "poppins", accent: "#f472b6",
+  },
+  industrial: {
+    key: "industrial", name: "Industrial", dark: true, hero: "cover",
+    columns: 4, cardRadius: "rounded-none", headingClass: "text-3xl font-extrabold uppercase tracking-widest", font: "montserrat", accent: "#f59e0b",
+  },
+  luxe: {
+    key: "luxe", name: "Luxe", dark: true, hero: "minimal",
+    columns: 3, cardRadius: "rounded-none", headingClass: "text-4xl font-semibold tracking-tight", font: "playfair", accent: "#d4af37",
+  },
+  fresh: {
+    key: "fresh", name: "Fresh", dark: false, hero: "gradient",
+    columns: 4, cardRadius: "rounded-2xl", headingClass: "text-3xl font-bold tracking-tight", font: "dmsans", accent: "#10b981",
+  },
+  ocean: {
+    key: "ocean", name: "Ocean", dark: false, hero: "cover",
+    columns: 3, cardRadius: "rounded-2xl", headingClass: "text-3xl font-bold", font: "inter", accent: "#0891b2",
+  },
 };
 
 export function getTemplate(key: string | null | undefined): TemplateConfig {
@@ -97,4 +121,10 @@ export const TEMPLATE_PICKER: { key: string; name: string; color: string }[] = [
   { key: "bold-modern", name: "Moderno audaz", color: "#0ea5e9" },
   { key: "beauty-studio", name: "Beauty Studio", color: "#a855f7" },
   { key: "local-market", name: "Local Market", color: "#22c55e" },
+  { key: "midnight", name: "Midnight", color: "#6366f1" },
+  { key: "pastel", name: "Pastel", color: "#f472b6" },
+  { key: "industrial", name: "Industrial", color: "#f59e0b" },
+  { key: "luxe", name: "Luxe", color: "#d4af37" },
+  { key: "fresh", name: "Fresh", color: "#10b981" },
+  { key: "ocean", name: "Ocean", color: "#0891b2" },
 ];

@@ -86,3 +86,13 @@ Cuando estas variables existen, `sendWhatsApp()` envía por la API; si no, devue
 ### Resumen para el demo
 - **Funciona hoy, sin configurar nada de Meta:** todos los tickets y mensajes vía `wa.me`.
 - **Solo si activas la Cloud API:** envío automático sin abrir la app y recepción de mensajes entrantes.
+
+---
+
+## ⚡ Crear precios de Stripe automáticamente
+
+En vez de crearlos a mano, corre el script (idempotente):
+```bash
+STRIPE_SECRET_KEY=sk_live_xxx npm run stripe:setup
+```
+Crea los productos **WhatsCommerce Pro** y **Enterprise** con precios mensual y anual (MXN por defecto; cambia con `STRIPE_CURRENCY`) y te imprime las variables `STRIPE_PRICE_*` para pegar en Vercel. Vuelve a correrlo cuando quieras: reutiliza los precios existentes por `lookup_key`.
