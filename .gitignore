@@ -10,3 +10,4 @@ build
 prisma/*.db
 coverage
 .env*
+.fuse_hidden*
