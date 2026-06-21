@@ -1,8 +1,10 @@
 "use client";
 import * as React from "react";
-import { MessageCircle, Store as StoreIcon } from "lucide-react";
-import { ProductCard } from "@/components/store/product-card";
+import { MessageCircle, Store as StoreIcon, BadgeCheck, Star, MapPin, Clock, Instagram, Facebook } from "lucide-react";
+import { ProductCard, type StoreProduct } from "@/components/store/product-card";
 import { CartDrawer } from "@/components/store/cart-drawer";
+import { ProductSheet } from "@/components/store/product-sheet";
+import { PromoPopup } from "@/components/store/promo-popup";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/store/cart";
 import { normalizePhone, cn } from "@/lib/utils";
@@ -10,6 +12,11 @@ import { getTemplate } from "@/lib/templates";
 import { FONTS } from "@/lib/fonts";
 import { getDict } from "@/lib/i18n";
 import type { StorefrontDTO } from "@/server/storefront";
+
+function compact(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
+  return String(n);
+}
 
 const GRID_COLS: Record<number, string> = {
   2: "lg:grid-cols-2",
@@ -20,9 +27,14 @@ const GRID_COLS: Record<number, string> = {
 export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo?: boolean }) {
   const setStore = useCart((s) => s.setStore);
   const [activeCat, setActiveCat] = React.useState<string | null>(null);
+  const [active, setActive] = React.useState<StoreProduct | null>(null);
   const tpl = getTemplate(store.templateKey);
   const accent = store.primaryColor || tpl.accent;
   const t = getDict(store.locale);
+
+  const related = active
+    ? store.products.filter((p) => p.id !== active.id && p.categoryId === active.categoryId).slice(0, 4)
+    : [];
 
   React.useEffect(() => {
     setStore(store.id);
@@ -58,9 +70,35 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
             )}
           </div>
           <div className="pb-2">
-            <h1 className={tpl.headingClass}>{store.name}</h1>
+            <h1 className={cn(tpl.headingClass, "flex items-center gap-1.5")}>
+              {store.name}
+              {store.verified && <BadgeCheck className="h-5 w-5 text-sky-500" aria-label="Tienda verificada" />}
+            </h1>
             {store.description && <p className="text-sm text-muted-foreground">{store.description}</p>}
           </div>
+        </div>
+
+        {/* social proof / trust strip */}
+        <div className="container mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          {store.ratingCount > 0 && store.ratingAvg != null && (
+            <span className="flex items-center gap-1 font-medium text-foreground">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              {store.ratingAvg.toFixed(1)} <span className="font-normal text-muted-foreground">({store.ratingCount})</span>
+            </span>
+          )}
+          {store.instagramFollowers != null && (
+            <a href={store.instagramUrl ?? "#"} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground">
+              <Instagram className="h-3.5 w-3.5" /> {compact(store.instagramFollowers)}
+            </a>
+          )}
+          {store.facebookFollowers != null && (
+            <span className="flex items-center gap-1"><Facebook className="h-3.5 w-3.5" /> {compact(store.facebookFollowers)}</span>
+          )}
+          {store.tiktokFollowers != null && (
+            <span className="flex items-center gap-1"><span className="font-semibold">TikTok</span> {compact(store.tiktokFollowers)}</span>
+          )}
+          {store.hoursText && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {store.hoursText}</span>}
+          {store.addressText && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {store.addressText}</span>}
         </div>
       </header>
 
@@ -92,7 +130,7 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
       {/* products grid */}
       <main className={cn("container mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3", GRID_COLS[tpl.columns])}>
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} currency={store.currency} accent={accent} radius={tpl.cardRadius} />
+          <ProductCard key={p.id} product={p} currency={store.currency} accent={accent} radius={tpl.cardRadius} onOpen={setActive} />
         ))}
       </main>
 
@@ -114,6 +152,18 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
           <MessageCircle className="h-6 w-6" />
         </a>
       )}
+
+      <ProductSheet
+        product={active}
+        related={related}
+        currency={store.currency}
+        accent={accent}
+        dict={t}
+        onClose={() => setActive(null)}
+        onOpen={setActive}
+      />
+
+      {store.promo && <PromoPopup promo={store.promo} accent={accent} storeId={store.id} />}
 
       <CartDrawer slug={store.slug} currency={store.currency} accent={accent} dict={t} demo={demo} />
 

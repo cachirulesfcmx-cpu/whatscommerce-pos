@@ -325,6 +325,23 @@ model StoreSettings {
   paymentMethods   Json     @default("[]") // [{ method, label, instructions, enabled }]
   // business hours
   openingHours     Json     @default("{}") // { mon:[{open,close}], ... }
+  hoursText        String?  // human-friendly hours, e.g. "Lun–Sáb 9:00–18:00"
+  addressText      String?  // shown on the storefront header
+  // social proof / trust (Take.app-style)
+  instagramUrl     String?
+  instagramFollowers Int?
+  facebookFollowers  Int?
+  tiktokFollowers    Int?
+  verified         Boolean  @default(false) // verified store badge (granted by platform)
+  ratingAvg        Decimal? @db.Decimal(3, 2)
+  ratingCount      Int      @default(0)
+  // promo popup banner
+  promoEnabled     Boolean  @default(false)
+  promoTitle       String?
+  promoText        String?
+  promoCtaLabel    String?
+  promoCtaUrl      String?
+  promoImageUrl    String?
   // misc
   taxRate          Decimal  @default(0) @db.Decimal(5, 2)
   taxIncluded      Boolean  @default(true)

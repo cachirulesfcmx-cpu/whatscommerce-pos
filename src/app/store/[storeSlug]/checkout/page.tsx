@@ -35,7 +35,7 @@ export default async function CheckoutPage({
     ((store.settings?.deliveryMethods as { method: string; label: string; fee?: number; enabled?: boolean }[]) ?? [])
       .filter((d) => d.enabled !== false);
   const payment =
-    ((store.settings?.paymentMethods as { method: string; label: string; enabled?: boolean }[]) ?? [])
+    ((store.settings?.paymentMethods as { method: string; label: string; instructions?: string; enabled?: boolean }[]) ?? [])
       .filter((p) => p.enabled !== false);
 
   return (

@@ -56,6 +56,24 @@ export const PAYMENT_METHODS = [
   { method: "QR", label: "Pago con QR" },
 ] as const;
 
+/**
+ * Branded payment presets a store can enable at checkout. Each maps to an
+ * underlying PaymentMethod enum so orders stay typed, while the customer sees
+ * the familiar brand label. `instructions` is editable per store.
+ */
+export const PAYMENT_PRESETS: { key: string; label: string; method: string; instructions: string; emoji: string }[] = [
+  { key: "cash", label: "Efectivo", method: "CASH", instructions: "Paga en efectivo al recibir o recoger.", emoji: "💵" },
+  { key: "transfer", label: "Transferencia / SPEI", method: "TRANSFER", instructions: "Transfiere a la CLABE: 0000 0000 0000 0000 y envía tu comprobante.", emoji: "🏦" },
+  { key: "card", label: "Tarjeta", method: "CARD", instructions: "Paga con tarjeta de crédito o débito.", emoji: "💳" },
+  { key: "cod", label: "Pago contra entrega", method: "COD", instructions: "Paga en efectivo o tarjeta al momento de la entrega.", emoji: "📦" },
+  { key: "mercadopago", label: "Mercado Pago", method: "PAYMENT_LINK", instructions: "Te enviaremos un link de Mercado Pago para completar tu pago.", emoji: "🔵" },
+  { key: "paypal", label: "PayPal", method: "PAYMENT_LINK", instructions: "Te compartiremos un link de PayPal por WhatsApp.", emoji: "🅿️" },
+  { key: "oxxo", label: "OXXO", method: "CASH", instructions: "Te damos una referencia para pagar en cualquier OXXO.", emoji: "🟡" },
+  { key: "spei_qr", label: "QR / CoDi", method: "QR", instructions: "Escanea el código QR para pagar desde tu banco.", emoji: "🔳" },
+  { key: "zelle", label: "Zelle", method: "TRANSFER", instructions: "Envía tu pago por Zelle al correo de la tienda.", emoji: "🟣" },
+  { key: "pix", label: "Pix", method: "QR", instructions: "Paga con Pix escaneando el QR o usando la clave Pix.", emoji: "🟢" },
+];
+
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   NEW: "Nuevo",
   CONFIRMED: "Confirmado",

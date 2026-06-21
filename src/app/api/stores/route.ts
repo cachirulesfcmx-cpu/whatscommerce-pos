@@ -48,7 +48,21 @@ export const PATCH = handle(async (req: NextRequest) => {
   assertPermission(ctx.staff, "settings:update");
 
   const data = storeSettingsSchema.parse(await req.json());
-  const { deliveryMethods, paymentMethods, taxRate, blockOutOfStock, ...storeFields } = data;
+  const {
+    deliveryMethods, paymentMethods, taxRate, blockOutOfStock,
+    addressText, hoursText, instagramUrl, instagramFollowers, facebookFollowers, tiktokFollowers,
+    promoEnabled, promoTitle, promoText, promoCtaLabel, promoCtaUrl, promoImageUrl,
+    ...storeFields
+  } = data;
+
+  // Fields that live on StoreSettings (only include keys the caller sent).
+  const settingsFields: Record<string, unknown> = {};
+  const put = (k: string, v: unknown) => { if (v !== undefined) settingsFields[k] = v === "" ? null : v; };
+  put("addressText", addressText); put("hoursText", hoursText);
+  put("instagramUrl", instagramUrl); put("instagramFollowers", instagramFollowers);
+  put("facebookFollowers", facebookFollowers); put("tiktokFollowers", tiktokFollowers);
+  put("promoEnabled", promoEnabled); put("promoTitle", promoTitle); put("promoText", promoText);
+  put("promoCtaLabel", promoCtaLabel); put("promoCtaUrl", promoCtaUrl); put("promoImageUrl", promoImageUrl);
 
   const updated = await prisma.store.update({
     where: { id: store.id },
@@ -61,12 +75,14 @@ export const PATCH = handle(async (req: NextRequest) => {
             paymentMethods: paymentMethods ?? [],
             taxRate: taxRate ?? 0,
             blockOutOfStock: blockOutOfStock ?? false,
+            ...settingsFields,
           },
           update: {
             ...(deliveryMethods !== undefined ? { deliveryMethods } : {}),
             ...(paymentMethods !== undefined ? { paymentMethods } : {}),
             ...(taxRate !== undefined ? { taxRate } : {}),
             ...(blockOutOfStock !== undefined ? { blockOutOfStock } : {}),
+            ...settingsFields,
           },
         },
       },

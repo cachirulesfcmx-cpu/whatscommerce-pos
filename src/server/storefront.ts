@@ -48,6 +48,26 @@ export function serializeStorefront(store: Storefront) {
     templateKey: store.templateKey,
     whatsappPhone: store.whatsappSettings?.phone ?? null,
     showBranding: store.settings?.showBranding ?? true,
+    // trust / social proof
+    verified: store.settings?.verified ?? false,
+    instagramUrl: store.settings?.instagramUrl ?? null,
+    instagramFollowers: store.settings?.instagramFollowers ?? null,
+    facebookFollowers: store.settings?.facebookFollowers ?? null,
+    tiktokFollowers: store.settings?.tiktokFollowers ?? null,
+    ratingAvg: store.settings?.ratingAvg != null ? Number(store.settings.ratingAvg) : null,
+    ratingCount: store.settings?.ratingCount ?? 0,
+    addressText: store.settings?.addressText ?? null,
+    hoursText: store.settings?.hoursText ?? null,
+    // promo popup
+    promo: store.settings?.promoEnabled
+      ? {
+          title: store.settings.promoTitle ?? "",
+          text: store.settings.promoText ?? "",
+          ctaLabel: store.settings.promoCtaLabel ?? null,
+          ctaUrl: store.settings.promoCtaUrl ?? null,
+          imageUrl: store.settings.promoImageUrl ?? null,
+        }
+      : null,
     deliveryMethods: (store.settings?.deliveryMethods as unknown[]) ?? [],
     paymentMethods: (store.settings?.paymentMethods as unknown[]) ?? [],
     categories: store.categories.map((c) => ({ id: c.id, name: c.name })),

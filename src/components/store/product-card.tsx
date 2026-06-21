@@ -22,12 +22,13 @@ export interface StoreProduct {
 }
 
 export function ProductCard({
-  product, currency, accent, radius = "rounded-2xl",
+  product, currency, accent, radius = "rounded-2xl", onOpen,
 }: {
   product: StoreProduct;
   currency: string;
   accent: string;
   radius?: string;
+  onOpen?: (p: StoreProduct) => void;
 }) {
   const addLine = useCart((s) => s.addLine);
   const { toast } = useToast();
@@ -60,7 +61,7 @@ export function ProductCard({
       viewport={{ once: true }}
       className={`group flex flex-col overflow-hidden border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-primary/30 ${radius}`}
     >
-      <div className="relative aspect-square overflow-hidden bg-muted">
+      <div className="relative aspect-square cursor-pointer overflow-hidden bg-muted" onClick={() => onOpen?.(product)}>
         {product.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -83,7 +84,7 @@ export function ProductCard({
         )}
       </div>
       <div className="flex flex-1 flex-col p-3">
-        <h3 className="line-clamp-1 font-semibold">{product.name}</h3>
+        <h3 className="line-clamp-1 cursor-pointer font-semibold hover:underline" onClick={() => onOpen?.(product)}>{product.name}</h3>
         {product.description && (
           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{product.description}</p>
         )}

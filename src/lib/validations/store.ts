@@ -27,6 +27,20 @@ export const storeSettingsSchema = z.object({
   paymentMethods: z.array(z.any()).optional(),
   taxRate: z.number().min(0).max(100).optional(),
   blockOutOfStock: z.boolean().optional(),
+  // profile / social proof
+  addressText: z.string().max(160).optional().nullable(),
+  hoursText: z.string().max(120).optional().nullable(),
+  instagramUrl: z.string().url().optional().nullable().or(z.literal("")),
+  instagramFollowers: z.number().int().min(0).optional().nullable(),
+  facebookFollowers: z.number().int().min(0).optional().nullable(),
+  tiktokFollowers: z.number().int().min(0).optional().nullable(),
+  // promo popup
+  promoEnabled: z.boolean().optional(),
+  promoTitle: z.string().max(80).optional().nullable(),
+  promoText: z.string().max(300).optional().nullable(),
+  promoCtaLabel: z.string().max(40).optional().nullable(),
+  promoCtaUrl: z.string().url().optional().nullable().or(z.literal("")),
+  promoImageUrl: z.string().url().optional().nullable().or(z.literal("")),
 });
 
 export type OnboardingInput = z.infer<typeof onboardingSchema>;

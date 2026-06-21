@@ -9,19 +9,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { TEMPLATES } from "@/lib/constants";
+import { TEMPLATES, PAYMENT_PRESETS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TEMPLATE_VARIABLES, DEFAULT_TEMPLATE_LABELS } from "@/lib/whatsapp/customer-messages";
 import { ThemePreview } from "@/components/dashboard/theme-preview";
 import { LOCALES } from "@/lib/i18n";
 
+interface ProfileData {
+  verified: boolean;
+  addressText: string | null;
+  hoursText: string | null;
+  instagramUrl: string | null;
+  instagramFollowers: number | null;
+  facebookFollowers: number | null;
+  tiktokFollowers: number | null;
+  promoEnabled: boolean;
+  promoTitle: string | null;
+  promoText: string | null;
+  promoCtaLabel: string | null;
+  promoCtaUrl: string | null;
+  promoImageUrl: string | null;
+  paymentMethods: { key?: string; method: string; label: string; instructions?: string; enabled?: boolean }[];
+}
+
 export function SettingsPanel({
-  defaultTab = "general", store, whatsapp, storeSlug,
+  defaultTab = "general", store, whatsapp, storeSlug, profile,
 }: {
   defaultTab?: string;
   storeSlug?: string;
   store: { name: string; description: string | null; logoUrl: string | null; bannerUrl: string | null; primaryColor: string; templateKey: string; locale?: string | null; seoTitle: string | null; seoDescription: string | null };
   whatsapp: { phone: string | null; displayName: string | null; notifyCustomer: boolean; templates?: Record<string, string> };
+  profile?: ProfileData;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -32,6 +50,47 @@ export function SettingsPanel({
   const [s, setS] = React.useState(store);
   const [wa, setWa] = React.useState({ phone: whatsapp.phone ?? "", displayName: whatsapp.displayName ?? "", notifyCustomer: whatsapp.notifyCustomer });
   const [templates, setTemplates] = React.useState<Record<string, string>>(whatsapp.templates ?? {});
+  const [savingProfile, setSavingProfile] = React.useState(false);
+  const [p, setP] = React.useState({
+    addressText: profile?.addressText ?? "",
+    hoursText: profile?.hoursText ?? "",
+    instagramUrl: profile?.instagramUrl ?? "",
+    instagramFollowers: profile?.instagramFollowers ?? "",
+    facebookFollowers: profile?.facebookFollowers ?? "",
+    tiktokFollowers: profile?.tiktokFollowers ?? "",
+    promoEnabled: profile?.promoEnabled ?? false,
+    promoTitle: profile?.promoTitle ?? "",
+    promoText: profile?.promoText ?? "",
+    promoCtaLabel: profile?.promoCtaLabel ?? "",
+    promoCtaUrl: profile?.promoCtaUrl ?? "",
+    promoImageUrl: profile?.promoImageUrl ?? "",
+  });
+  const enabledPaymentKeys = (profile?.paymentMethods ?? []).map((m) => m.key).filter(Boolean) as string[];
+  const [payKeys, setPayKeys] = React.useState<string[]>(
+    enabledPaymentKeys.length ? enabledPaymentKeys : ["cash", "transfer"]
+  );
+
+  async function saveProfile() {
+    setSavingProfile(true);
+    const toNum = (v: string | number) => (v === "" || v == null ? null : Number(v));
+    const paymentMethods = PAYMENT_PRESETS.filter((pp) => payKeys.includes(pp.key)).map((pp) => ({
+      key: pp.key, method: pp.method, label: pp.label, instructions: pp.instructions, enabled: true,
+    }));
+    const res = await fetch("/api/stores", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        addressText: p.addressText || null, hoursText: p.hoursText || null,
+        instagramUrl: p.instagramUrl || null,
+        instagramFollowers: toNum(p.instagramFollowers), facebookFollowers: toNum(p.facebookFollowers), tiktokFollowers: toNum(p.tiktokFollowers),
+        promoEnabled: p.promoEnabled, promoTitle: p.promoTitle || null, promoText: p.promoText || null,
+        promoCtaLabel: p.promoCtaLabel || null, promoCtaUrl: p.promoCtaUrl || null, promoImageUrl: p.promoImageUrl || null,
+        paymentMethods,
+      }),
+    });
+    setSavingProfile(false);
+    if (!res.ok) { toast({ variant: "destructive", title: "Error al guardar" }); return; }
+    toast({ variant: "success", title: "Perfil actualizado" }); router.refresh();
+  }
 
   async function saveStore() {
     setSavingStore(true);
@@ -65,6 +124,7 @@ export function SettingsPanel({
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
+          <TabsTrigger value="profile">Perfil & Pagos</TabsTrigger>
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
         </TabsList>
@@ -134,6 +194,69 @@ export function SettingsPanel({
               </div>
             </CardContent></Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="profile">
+          <Card><CardContent className="space-y-4 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Verificación</Label>
+                <p className="text-xs text-muted-foreground">El badge azul lo otorga la plataforma. {profile?.verified ? "Tu tienda está verificada ✅" : "Aún no verificada."}</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label>Dirección (texto)</Label><Input value={p.addressText} onChange={(e) => setP({ ...p, addressText: e.target.value })} placeholder="CDMX, México" /></div>
+              <div className="space-y-1.5"><Label>Horario (texto)</Label><Input value={p.hoursText} onChange={(e) => setP({ ...p, hoursText: e.target.value })} placeholder="Lun–Sáb 9:00–18:00" /></div>
+            </div>
+            <div className="space-y-1.5"><Label>Instagram (URL)</Label><Input value={p.instagramUrl} onChange={(e) => setP({ ...p, instagramUrl: e.target.value })} placeholder="https://instagram.com/tutienda" /></div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5"><Label>Seguidores IG</Label><Input type="number" value={p.instagramFollowers} onChange={(e) => setP({ ...p, instagramFollowers: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label>Seguidores FB</Label><Input type="number" value={p.facebookFollowers} onChange={(e) => setP({ ...p, facebookFollowers: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label>Seguidores TikTok</Label><Input type="number" value={p.tiktokFollowers} onChange={(e) => setP({ ...p, tiktokFollowers: e.target.value })} /></div>
+            </div>
+          </CardContent></Card>
+
+          <Card className="mt-4"><CardContent className="space-y-3 p-5">
+            <Label>Métodos de pago aceptados</Label>
+            <p className="text-xs text-muted-foreground">Se muestran en el checkout con sus instrucciones.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PAYMENT_PRESETS.map((pp) => {
+                const on = payKeys.includes(pp.key);
+                return (
+                  <button
+                    key={pp.key}
+                    type="button"
+                    onClick={() => setPayKeys((k) => on ? k.filter((x) => x !== pp.key) : [...k, pp.key])}
+                    className={cn("flex items-center gap-2 rounded-xl border p-3 text-left text-sm", on && "ring-2 ring-primary")}
+                  >
+                    <span>{pp.emoji}</span>
+                    <span className="flex-1">{pp.label}</span>
+                    {on && <span className="text-xs font-medium text-primary">Activo</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent></Card>
+
+          <Card className="mt-4"><CardContent className="space-y-3 p-5">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" checked={p.promoEnabled} onChange={(e) => setP({ ...p, promoEnabled: e.target.checked })} />
+              Mostrar popup promocional en la tienda
+            </label>
+            {p.promoEnabled && (
+              <div className="space-y-3">
+                <div className="space-y-1.5"><Label>Título</Label><Input value={p.promoTitle} onChange={(e) => setP({ ...p, promoTitle: e.target.value })} placeholder="🎉 2x1 esta semana" /></div>
+                <div className="space-y-1.5"><Label>Texto</Label><Textarea value={p.promoText} onChange={(e) => setP({ ...p, promoText: e.target.value })} placeholder="Aprovecha nuestra promo de bienvenida." /></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label>Texto del botón</Label><Input value={p.promoCtaLabel} onChange={(e) => setP({ ...p, promoCtaLabel: e.target.value })} placeholder="Ver productos" /></div>
+                  <div className="space-y-1.5"><Label>Link del botón (opcional)</Label><Input value={p.promoCtaUrl} onChange={(e) => setP({ ...p, promoCtaUrl: e.target.value })} /></div>
+                </div>
+                <div className="space-y-1.5"><Label>Imagen (URL, opcional)</Label><Input value={p.promoImageUrl} onChange={(e) => setP({ ...p, promoImageUrl: e.target.value })} /></div>
+              </div>
+            )}
+          </CardContent></Card>
+
+          <Button variant="brand" className="mt-4" onClick={saveProfile} disabled={savingProfile}>{savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Guardar perfil</Button>
         </TabsContent>
 
         <TabsContent value="whatsapp">

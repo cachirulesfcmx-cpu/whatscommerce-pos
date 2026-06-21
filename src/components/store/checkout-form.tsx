@@ -12,7 +12,7 @@ import { formatMoney, cn } from "@/lib/utils";
 import { useCart } from "@/store/cart";
 import { getDict } from "@/lib/i18n";
 
-interface Method { method: string; label: string; fee?: number }
+interface Method { method: string; label: string; fee?: number; instructions?: string }
 
 export function CheckoutForm({
   storeId, slug, currency, accent, deliveryMethods, paymentMethods, locale,
@@ -33,7 +33,8 @@ export function CheckoutForm({
   const [loading, setLoading] = React.useState(false);
   const [success, setSuccess] = React.useState<{ number: string; waLink: string | null } | null>(null);
   const [delivery, setDelivery] = React.useState(deliveryMethods[0]?.method ?? "PICKUP");
-  const [payment, setPayment] = React.useState(paymentMethods[0]?.method ?? "CASH");
+  const [paymentIdx, setPaymentIdx] = React.useState(0);
+  const payment = paymentMethods[paymentIdx]?.method ?? "CASH";
   const [coupon, setCoupon] = React.useState("");
   const [appliedCoupon, setAppliedCoupon] = React.useState<{ code: string; type: string; value: number } | null>(null);
   const [form, setForm] = React.useState({ name: "", phone: "", email: "", line1: "", references: "", notes: "" });
@@ -201,12 +202,15 @@ export function CheckoutForm({
         <Card><CardContent className="space-y-3 p-5">
           <h2 className="font-semibold">{t.payment}</h2>
           <div className="grid gap-2 sm:grid-cols-2">
-            {paymentMethods.map((p) => (
-              <button key={p.method} onClick={() => setPayment(p.method)} className={cn("rounded-xl border p-3 text-left text-sm", payment === p.method && "ring-2 ring-primary")}>
-                {p.label}
+            {paymentMethods.map((pm, i) => (
+              <button key={`${pm.method}-${i}`} onClick={() => setPaymentIdx(i)} className={cn("rounded-xl border p-3 text-left text-sm", paymentIdx === i && "ring-2 ring-primary")}>
+                {pm.label}
               </button>
             ))}
           </div>
+          {paymentMethods[paymentIdx]?.instructions && (
+            <p className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">{paymentMethods[paymentIdx].instructions}</p>
+          )}
         </CardContent></Card>
 
         {/* coupon + notes */}
