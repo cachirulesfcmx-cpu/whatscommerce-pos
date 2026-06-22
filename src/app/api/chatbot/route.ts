@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { handle, ok, ApiError } from "@/server/api";
 import { getActiveStore, requireStoreAccess, assertPermission } from "@/server/context";
-import { defaultGraph } from "@/lib/chatbot/types";
+import { defaultFlowGraph } from "@/lib/chatbot/types";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ async function getOrCreateDefault(storeId: string) {
   let flow = await prisma.chatFlow.findFirst({ where: { storeId, isDefault: true } });
   if (!flow) {
     flow = await prisma.chatFlow.create({
-      data: { storeId, name: "Chatbot principal", isDefault: true, graph: defaultGraph() as object },
+      data: { storeId, name: "Chatbot principal", isDefault: true, graph: defaultFlowGraph() as object },
     });
   }
   return flow;
@@ -26,7 +26,10 @@ export const GET = handle(async () => {
 });
 
 const saveSchema = z.object({
-  graph: z.object({ blocks: z.array(z.any()) }),
+  graph: z.object({
+    nodes: z.array(z.any()).default([]),
+    edges: z.array(z.any()).default([]),
+  }),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
 });
 

@@ -2,7 +2,7 @@ import { getDashboardContext } from "@/server/dashboard";
 import { prisma } from "@/lib/prisma";
 import { FeatureGate } from "@/components/dashboard/feature-gate";
 import { ChatbotBuilder } from "@/components/dashboard/chatbot-builder";
-import { defaultGraph, type ChatGraph } from "@/lib/chatbot/types";
+import { toFlowGraph } from "@/lib/chatbot/types";
 
 export const metadata = { title: "Chatbot" };
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function ChatbotPage() {
   }
 
   const flow = await prisma.chatFlow.findFirst({ where: { storeId: store.id, isDefault: true } });
-  const graph: ChatGraph = (flow?.graph as ChatGraph | null) ?? defaultGraph();
+  const graph = toFlowGraph(flow?.graph ?? null);
   const status = flow?.status ?? "DRAFT";
 
   return <ChatbotBuilder initialGraph={graph} initialStatus={status} />;
