@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import {
-  Bot, MessageSquare, ListChecks, Sparkles, GitBranch, UserRound, Flag,
-  Save, Rocket, Loader2, Trash2, Plus, Send, X,
+  Bot, MessageSquare, ListChecks, Sparkles, GitBranch, UserRound, Flag, Zap,
+  Save, Rocket, Loader2, Trash2, Plus, Send, X, ZoomIn, ZoomOut, Maximize,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
-  NODE_LABELS, NODE_HINTS, newNode, outHandles,
-  type FlowGraph, type FlowNode, type FlowEdge, type NodeType,
+  NODE_LABELS, NODE_HINTS, ACTION_LABELS, newNode, outHandles,
+  type FlowGraph, type FlowNode, type FlowEdge, type NodeType, type ActionKind,
 } from "@/lib/chatbot/types";
 
 const NODE_W = 210;
@@ -25,10 +25,11 @@ const META: Record<NodeType, { icon: typeof Bot; color: string }> = {
   options: { icon: ListChecks, color: "#7c3aed" },
   ai: { icon: Sparkles, color: "#d97706" },
   condition: { icon: GitBranch, color: "#dc2626" },
+  action: { icon: Zap, color: "#0891b2" },
   handoff: { icon: UserRound, color: "#475569" },
 };
 
-const ADDABLE: NodeType[] = ["message", "options", "ai", "condition", "handoff"];
+const ADDABLE: NodeType[] = ["message", "options", "ai", "condition", "action", "handoff"];
 
 function inputAnchor(n: FlowNode) {
   return { x: n.x + NODE_W / 2, y: n.y };
@@ -48,9 +49,12 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
   const [saving, setSaving] = React.useState(false);
   const [selected, setSelected] = React.useState<string | null>(null);
   const [connecting, setConnecting] = React.useState<{ source: string; handle: string } | null>(null);
+  const [scale, setScale] = React.useState(1);
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ id: string; offX: number; offY: number } | null>(null);
   const [dragging, setDragging] = React.useState(false);
+  const pan = React.useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const [panning, setPanning] = React.useState(false);
 
   const byId = React.useCallback((id: string) => nodes.find((n) => n.id === id), [nodes]);
 
@@ -61,23 +65,47 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
       const d = drag.current;
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!d || !rect) return;
-      const x = e.clientX - rect.left + (canvasRef.current?.scrollLeft ?? 0) - d.offX;
-      const y = e.clientY - rect.top + (canvasRef.current?.scrollTop ?? 0) - d.offY;
+      const x = (e.clientX - rect.left + (canvasRef.current?.scrollLeft ?? 0)) / scale - d.offX;
+      const y = (e.clientY - rect.top + (canvasRef.current?.scrollTop ?? 0)) / scale - d.offY;
       setNodes((ns) => ns.map((n) => (n.id === d.id ? { ...n, x: Math.max(0, x), y: Math.max(0, y) } : n)));
     }
     function up() { drag.current = null; setDragging(false); }
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
-  }, [dragging]);
+  }, [dragging, scale]);
+
+  /* ── background panning ── */
+  React.useEffect(() => {
+    if (!panning) return;
+    function move(e: PointerEvent) {
+      const p = pan.current; const el = canvasRef.current;
+      if (!p || !el) return;
+      el.scrollLeft = p.left - (e.clientX - p.x);
+      el.scrollTop = p.top - (e.clientY - p.y);
+    }
+    function up() { pan.current = null; setPanning(false); }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+  }, [panning]);
+
+  function startPan(e: React.PointerEvent) {
+    const el = canvasRef.current;
+    if (!el) return;
+    pan.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+    setPanning(true);
+    setSelected(null);
+    setConnecting(null);
+  }
 
   function startDrag(e: React.PointerEvent, n: FlowNode) {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     drag.current = {
       id: n.id,
-      offX: e.clientX - rect.left + (canvasRef.current?.scrollLeft ?? 0) - n.x,
-      offY: e.clientY - rect.top + (canvasRef.current?.scrollTop ?? 0) - n.y,
+      offX: (e.clientX - rect.left + (canvasRef.current?.scrollLeft ?? 0)) / scale - n.x,
+      offY: (e.clientY - rect.top + (canvasRef.current?.scrollTop ?? 0)) / scale - n.y,
     };
     setSelected(n.id);
     setDragging(true);
@@ -162,14 +190,26 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         {/* canvas */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="relative p-0">
+            {/* zoom controls */}
+            <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full border bg-background/90 p-1 shadow-sm backdrop-blur">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.max(0.4, +(s - 0.1).toFixed(2)))}><ZoomOut className="h-4 w-4" /></Button>
+              <span className="w-10 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.min(1.6, +(s + 0.1).toFixed(2)))}><ZoomIn className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(1)}><Maximize className="h-4 w-4" /></Button>
+            </div>
             <div
               ref={canvasRef}
-              onClick={(e) => { if (e.target === e.currentTarget) { setSelected(null); setConnecting(null); } }}
-              className="relative h-[560px] w-full overflow-auto rounded-xl"
+              className={cn("relative h-[560px] w-full overflow-auto rounded-xl", panning ? "cursor-grabbing" : "cursor-grab")}
               style={{ background: "radial-gradient(circle, rgba(148,163,184,0.25) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
             >
-              <div className="relative" style={{ width: 2200, height: 1500 }} onClick={(e) => { if (e.target === e.currentTarget) { setSelected(null); setConnecting(null); } }}>
+              {/* sizer drives the scroll area at the current scale */}
+              <div style={{ width: 2200 * scale, height: 1500 * scale }}>
+                <div
+                  className="relative origin-top-left"
+                  style={{ width: 2200, height: 1500, transform: `scale(${scale})` }}
+                  onPointerDown={(e) => { if (e.target === e.currentTarget) startPan(e); }}
+                >
                 {/* edges */}
                 <svg className="pointer-events-none absolute inset-0 h-full w-full">
                   {edges.map((e) => {
@@ -218,7 +258,13 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
                         <Icon className="h-3.5 w-3.5" /> {NODE_LABELS[n.type]}
                       </div>
                       <div className="px-3 py-2 text-xs text-muted-foreground">
-                        <p className="line-clamp-2">{n.type === "condition" ? `Si contiene: ${n.keyword || "…"}` : (n.text || "…")}</p>
+                        <p className="line-clamp-2">
+                          {n.type === "condition"
+                            ? `Si contiene: ${n.keyword || "…"}`
+                            : n.type === "action"
+                            ? `${ACTION_LABELS[n.action ?? "tag"]}${n.action === "tag" && n.text ? `: ${n.text}` : ""}`
+                            : (n.text || "…")}
+                        </p>
                       </div>
                       {/* output handles */}
                       {hs.map((h, i) => {
@@ -240,6 +286,7 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
                     </div>
                   );
                 })}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -280,6 +327,30 @@ export function ChatbotBuilder({ initialGraph, initialStatus }: { initialGraph: 
                     </div>
                   ))}
                   <Button variant="outline" size="sm" onClick={() => updateNode(sel.id, { options: [...(sel.options ?? []), { label: "Nueva opción" }] })}><Plus className="h-4 w-4" /> Opción</Button>
+                </div>
+              )}
+
+              {sel.type === "action" && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Tipo de acción</Label>
+                  <div className="grid gap-2">
+                    {(Object.keys(ACTION_LABELS) as ActionKind[]).map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => updateNode(sel.id, { action: a })}
+                        className={cn("rounded-xl border p-2.5 text-left text-sm", (sel.action ?? "tag") === a && "ring-2 ring-primary")}
+                      >
+                        {ACTION_LABELS[a]}
+                      </button>
+                    ))}
+                  </div>
+                  {(sel.action ?? "tag") === "tag" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Etiqueta a aplicar</Label>
+                      <Input value={sel.text ?? ""} onChange={(e) => updateNode(sel.id, { text: e.target.value })} placeholder="cliente-bot" />
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent></Card>
@@ -327,6 +398,11 @@ function Simulator({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) {
         const kws = (n.keyword || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
         const hit = kws.some((k) => lu.includes(k));
         cur = next(n.id, hit ? "yes" : "no"); continue;
+      }
+      if (n.type === "action") {
+        if (n.action === "close") { append({ from: "bot", text: "⚙️ (El bot se pausó — un humano continuará)" }); setAwaiting("none"); return; }
+        append({ from: "bot", text: `⚙️ Acción: etiquetar “${n.text || "cliente-bot"}”` });
+        cur = next(n.id, "out"); continue;
       }
       if (n.type === "options") {
         append({ from: "bot", text: n.text || "", options: (n.options ?? []).map((o, i) => ({ label: o.label, i })) });

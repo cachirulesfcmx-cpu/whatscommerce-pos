@@ -57,7 +57,8 @@ export const POST = handle(async (req: NextRequest) => {
   const message = await prisma.message.create({
     data: { conversationId, direction: "OUT", text },
   });
-  await prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date() } });
+  // A human stepped in → pause the bot for this conversation.
+  await prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), botActive: false } });
 
   return ok({ message, delivered });
 });

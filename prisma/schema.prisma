@@ -966,6 +966,8 @@ model Conversation {
   customerName   String?
   customerHandle String // phone number or IG handle
   status         ConvStatus  @default(OPEN)
+  botActive      Boolean     @default(true) // false once handed off to a human
+  botState       Json? // { nodeId, awaiting } — chatbot runtime position
   lastMessageAt  DateTime    @default(now())
   createdAt      DateTime    @default(now())
 

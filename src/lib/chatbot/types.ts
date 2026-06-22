@@ -13,7 +13,9 @@ export interface ChatGraph {
 }
 
 /* ── Visual node-graph model (canvas) ── */
-export type NodeType = "start" | "message" | "options" | "ai" | "condition" | "handoff";
+export type NodeType = "start" | "message" | "options" | "ai" | "condition" | "action" | "handoff";
+
+export type ActionKind = "tag" | "close";
 
 export interface FlowNode {
   id: string;
@@ -24,6 +26,8 @@ export interface FlowNode {
   options?: { label: string }[];
   /** condition: keyword(s) to match against the customer's message (comma separated) */
   keyword?: string;
+  /** action node: what to do */
+  action?: ActionKind;
 }
 
 export interface FlowEdge {
@@ -45,6 +49,7 @@ export const NODE_LABELS: Record<NodeType, string> = {
   options: "Mensaje con opciones",
   ai: "Respuesta con IA",
   condition: "Condición",
+  action: "Acción",
   handoff: "Transferir a humano",
 };
 
@@ -54,7 +59,13 @@ export const NODE_HINTS: Record<NodeType, string> = {
   options: "Botones de respuesta; cada opción es una rama.",
   ai: "La IA responde usando estas instrucciones y el catálogo.",
   condition: "Bifurca según palabras del mensaje del cliente.",
+  action: "Ejecuta una acción (etiquetar o cerrar el bot).",
   handoff: "Avisa que un humano continuará la conversación.",
+};
+
+export const ACTION_LABELS: Record<ActionKind, string> = {
+  tag: "Etiquetar al cliente",
+  close: "Pausar el bot (pasar a humano)",
 };
 
 /** Output handles for a node type (id + label). For options it's per-option. */
@@ -83,6 +94,7 @@ export function newNode(type: NodeType, x: number, y: number): FlowNode {
   if (type === "options") { base.text = "¿En qué te ayudo?"; base.options = [{ label: "Ver productos" }, { label: "Hacer un pedido" }]; }
   if (type === "ai") base.text = "Responde dudas de productos, precios y entregas de forma breve y amable.";
   if (type === "condition") base.keyword = "precio, costo, cuánto";
+  if (type === "action") { base.action = "tag"; base.text = "cliente-bot"; }
   if (type === "handoff") base.text = "¡Gracias! Un miembro del equipo continuará contigo. 🙌";
   return base;
 }
