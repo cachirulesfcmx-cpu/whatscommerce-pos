@@ -33,12 +33,13 @@ interface ProfileData {
 }
 
 export function SettingsPanel({
-  defaultTab = "general", store, whatsapp, storeSlug, profile,
+  defaultTab = "general", store, whatsapp, storeSlug, storeId, profile,
 }: {
   defaultTab?: string;
   storeSlug?: string;
+  storeId?: string;
   store: { name: string; description: string | null; logoUrl: string | null; bannerUrl: string | null; primaryColor: string; templateKey: string; locale?: string | null; seoTitle: string | null; seoDescription: string | null };
-  whatsapp: { phone: string | null; displayName: string | null; notifyCustomer: boolean; templates?: Record<string, string> };
+  whatsapp: { phone: string | null; displayName: string | null; notifyCustomer: boolean; templates?: Record<string, string>; mode?: string | null; bridgeUrl?: string | null; bridgeToken?: string | null; bridgeStatus?: string | null };
   profile?: ProfileData;
 }) {
   const router = useRouter();
@@ -48,8 +49,26 @@ export function SettingsPanel({
   const [device, setDevice] = React.useState<"mobile" | "desktop">("desktop");
   const [previewKey, setPreviewKey] = React.useState(0);
   const [s, setS] = React.useState(store);
-  const [wa, setWa] = React.useState({ phone: whatsapp.phone ?? "", displayName: whatsapp.displayName ?? "", notifyCustomer: whatsapp.notifyCustomer });
+  const [wa, setWa] = React.useState({
+    phone: whatsapp.phone ?? "", displayName: whatsapp.displayName ?? "", notifyCustomer: whatsapp.notifyCustomer,
+    mode: whatsapp.mode ?? "link", bridgeUrl: whatsapp.bridgeUrl ?? "", bridgeToken: whatsapp.bridgeToken ?? "",
+  });
   const [templates, setTemplates] = React.useState<Record<string, string>>(whatsapp.templates ?? {});
+  // QR bridge connection state
+  const [qr, setQr] = React.useState<{ status: string; qr: string | null; configured: boolean } | null>(null);
+  const [qrPolling, setQrPolling] = React.useState(false);
+  React.useEffect(() => {
+    if (!qrPolling) return;
+    let active = true;
+    const tick = async () => {
+      const res = await fetch("/api/whatsapp/qr").then((r) => r.json()).catch(() => null);
+      if (active && res?.data) setQr(res.data);
+      if (active && res?.data?.status === "connected") setQrPolling(false);
+    };
+    tick();
+    const iv = setInterval(tick, 3000);
+    return () => { active = false; clearInterval(iv); };
+  }, [qrPolling]);
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [p, setP] = React.useState({
     addressText: profile?.addressText ?? "",
@@ -110,7 +129,10 @@ export function SettingsPanel({
     setSavingWa(true);
     const res = await fetch("/api/whatsapp", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: wa.phone, displayName: wa.displayName, language: "es", notifyCustomer: wa.notifyCustomer, templates }),
+      body: JSON.stringify({
+        phone: wa.phone, displayName: wa.displayName, language: "es", notifyCustomer: wa.notifyCustomer, templates,
+        mode: wa.mode, bridgeUrl: wa.bridgeUrl || null, bridgeToken: wa.bridgeToken || null,
+      }),
     });
     setSavingWa(false);
     if (!res.ok) { toast({ variant: "destructive", title: "Error al guardar" }); return; }
@@ -264,6 +286,61 @@ export function SettingsPanel({
             <div className="space-y-1.5"><Label>Número de WhatsApp (con código de país)</Label><Input value={wa.phone} onChange={(e) => setWa({ ...wa, phone: e.target.value })} placeholder="5215512345678" /></div>
             <div className="space-y-1.5"><Label>Nombre para mostrar</Label><Input value={wa.displayName} onChange={(e) => setWa({ ...wa, displayName: e.target.value })} /></div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={wa.notifyCustomer} onChange={(e) => setWa({ ...wa, notifyCustomer: e.target.checked })} /> Notificar también al cliente</label>
+
+            {/* connection mode */}
+            <div className="space-y-2 border-t pt-4">
+              <Label>Conexión</Label>
+              <p className="text-xs text-muted-foreground">Cómo envía y recibe mensajes tu tienda.</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[
+                  { v: "link", t: "Enlace wa.me", d: "Sin automatización. Abre WhatsApp con el pedido prellenado." },
+                  { v: "cloud", t: "API oficial (Cloud)", d: "Recomendado para producción. Requiere aprobación de Meta." },
+                  { v: "qr", t: "QR (WhatsApp Web)", d: "Conecta por QR sin API. No oficial: riesgo de baneo." },
+                ].map((m) => (
+                  <button key={m.v} type="button" onClick={() => setWa({ ...wa, mode: m.v })}
+                    className={cn("rounded-xl border p-3 text-left", wa.mode === m.v && "ring-2 ring-primary")}>
+                    <span className="block text-sm font-medium">{m.t}</span>
+                    <span className="block text-[11px] text-muted-foreground">{m.d}</span>
+                  </button>
+                ))}
+              </div>
+
+              {wa.mode === "qr" && (
+                <div className="mt-2 space-y-3 rounded-xl border border-dashed p-4">
+                  <p className="text-xs text-muted-foreground">
+                    Despliega el <code className="rounded bg-muted px-1">bridge</code> (carpeta del proyecto) en un servicio always-on (Railway/Render/VPS) y pega aquí su URL y token.
+                  </p>
+                  {storeId && (
+                    <div className="space-y-1"><Label className="text-xs">STORE_ID (cópialo al bridge)</Label>
+                      <Input readOnly value={storeId} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
+                    </div>
+                  )}
+                  <div className="space-y-1"><Label className="text-xs">URL del bridge</Label>
+                    <Input value={wa.bridgeUrl} onChange={(e) => setWa({ ...wa, bridgeUrl: e.target.value })} placeholder="https://mi-bridge.up.railway.app" />
+                  </div>
+                  <div className="space-y-1"><Label className="text-xs">Token del bridge (BRIDGE_TOKEN)</Label>
+                    <Input value={wa.bridgeToken} onChange={(e) => setWa({ ...wa, bridgeToken: e.target.value })} placeholder="secreto-compartido" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={async () => { await saveWa(); setQrPolling(true); }}>
+                      Guardar y conectar
+                    </Button>
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
+                      qr?.status === "connected" ? "bg-emerald-100 text-emerald-700" :
+                      qr?.status === "qr" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>
+                      {qr?.status === "connected" ? "Conectado ✅" : qr?.status === "qr" ? "Escanea el QR" : qr?.status === "error" ? "Bridge no responde" : "Desconectado"}
+                    </span>
+                  </div>
+                  {qr?.qr && qr.status === "qr" && (
+                    <div className="flex flex-col items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={qr.qr} alt="QR de WhatsApp" className="h-52 w-52 rounded-lg border bg-white p-2" />
+                      <p className="text-xs text-muted-foreground">WhatsApp → Dispositivos vinculados → Vincular un dispositivo</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="space-y-2 border-t pt-4">
               <Label>Plantillas de mensajes por estado del pedido</Label>

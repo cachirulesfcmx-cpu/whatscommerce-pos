@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { handle, ok, ApiError } from "@/server/api";
 import { getActiveStore, requireStoreAccess, assertPermission } from "@/server/context";
-import { sendWhatsApp } from "@/lib/whatsapp";
+import { sendWhatsAppForStore } from "@/server/services/chatbot-runtime";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -50,8 +50,8 @@ export const POST = handle(async (req: NextRequest) => {
 
   let delivered = false;
   if (conv.channel === "WHATSAPP") {
-    const r = await sendWhatsApp(conv.customerHandle, text);
-    delivered = r.ok && r.channel === "cloud-api";
+    const r = await sendWhatsAppForStore(store.id, conv.customerHandle, text);
+    delivered = r.ok && (r.channel === "cloud-api" || r.channel === "qr-web");
   }
 
   const message = await prisma.message.create({

@@ -773,9 +773,15 @@ model WhatsAppSettings {
   displayName   String?
   language      String   @default("es")
   notifyCustomer Boolean @default(false)
+  // Transport mode: "link" (wa.me deep link), "cloud" (Meta Cloud API), "qr" (WhatsApp Web bridge)
+  mode          String   @default("link")
   // Cloud API (optional)
   cloudApiEnabled Boolean @default(false)
   phoneNumberId String?
+  // QR / WhatsApp Web bridge (optional, unofficial)
+  bridgeUrl     String?
+  bridgeToken   String?
+  bridgeStatus  String   @default("disconnected") // disconnected | qr | connected
   // message templates keyed by WhatsAppMessageType
   templates     Json     @default("{}")
   createdAt     DateTime @default(now())

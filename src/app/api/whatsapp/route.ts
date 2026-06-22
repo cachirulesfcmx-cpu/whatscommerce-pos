@@ -12,16 +12,23 @@ export const PATCH = handle(async (req: NextRequest) => {
   assertPermission(ctx.staff, "settings:update");
 
   const data = whatsappSettingsSchema.parse(await req.json());
+  const bridgeFields = {
+    ...(data.mode ? { mode: data.mode } : {}),
+    ...(data.bridgeUrl !== undefined ? { bridgeUrl: data.bridgeUrl || null } : {}),
+    ...(data.bridgeToken !== undefined ? { bridgeToken: data.bridgeToken || null } : {}),
+  };
   const ws = await prisma.whatsAppSettings.upsert({
     where: { storeId: store.id },
     create: {
       storeId: store.id, phone: normalizePhone(data.phone), displayName: data.displayName ?? null,
       language: data.language, notifyCustomer: data.notifyCustomer, templates: data.templates ?? {},
+      ...bridgeFields,
     },
     update: {
       phone: normalizePhone(data.phone), displayName: data.displayName ?? null,
       language: data.language, notifyCustomer: data.notifyCustomer,
       ...(data.templates ? { templates: data.templates } : {}),
+      ...bridgeFields,
     },
   });
   return ok({ id: ws.id });
