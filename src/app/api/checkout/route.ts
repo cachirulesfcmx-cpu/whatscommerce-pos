@@ -12,7 +12,7 @@ export const POST = handle(async (req: NextRequest) => {
   if (!rl.success) throw new ApiError(429, "Demasiados pedidos. Espera un momento.");
 
   const input = checkoutSchema.parse(await req.json());
-  const { order, ticket, waLink } = await createOrder({
+  const { order, ticket, waLink, licenses } = await createOrder({
     storeId: input.storeId,
     input,
     channel: "STORE",
@@ -34,6 +34,7 @@ export const POST = handle(async (req: NextRequest) => {
       total: Number(order.total),
       ticket,
       waLink,
+      licenses,
     },
     { status: 201 }
   );

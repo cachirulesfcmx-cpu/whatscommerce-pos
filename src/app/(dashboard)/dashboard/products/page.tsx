@@ -29,6 +29,8 @@ export default async function ProductsPage() {
     isActive: p.isActive,
     isFeatured: p.isFeatured,
     tags: p.tags,
+    instagramUrls: ((p.instagramUrls as string[]) ?? []).filter(Boolean),
+    licenseCodes: [],
     images: p.images.map((im) => ({ url: im.url, alt: im.alt ?? "", sortOrder: im.sortOrder })),
     variants: p.variants.map((v) => ({
       name: v.name,

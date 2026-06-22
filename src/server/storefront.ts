@@ -14,6 +14,7 @@ export async function getStorefrontBySlug(slug: string) {
           variants: { where: { isActive: true }, include: { options: true } },
           inventory: true,
           modifiers: { include: { modifier: true } },
+          reviews: { where: { approved: true }, orderBy: { createdAt: "desc" }, take: 20 },
         },
         orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
       },
@@ -81,6 +82,15 @@ export function serializeStorefront(store: Storefront) {
       isFeatured: p.isFeatured,
       image: p.images[0]?.url ?? null,
       images: p.images.map((im) => im.url),
+      instagramUrls: ((p.instagramUrls as string[]) ?? []).filter(Boolean),
+      reviews: p.reviews.map((r) => ({
+        customerName: r.customerName,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      ratingAvg: p.reviews.length ? p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviews.length : null,
+      ratingCount: p.reviews.length,
       variants: p.variants.map((v) => ({
         id: v.id,
         name: v.name,

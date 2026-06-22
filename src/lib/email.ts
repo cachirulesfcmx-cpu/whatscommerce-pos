@@ -44,6 +44,7 @@ interface OrderEmailData {
   items: { name: string; quantity: number; lineTotal: number }[];
   total: number;
   storeUrl?: string;
+  licenses?: { product: string; codes: string[] }[];
 }
 
 export function orderConfirmationEmail(d: OrderEmailData): { subject: string; html: string } {
@@ -53,6 +54,12 @@ export function orderConfirmationEmail(d: OrderEmailData): { subject: string; ht
         `<tr><td style="padding:6px 0">${i.quantity}× ${i.name}</td><td style="padding:6px 0;text-align:right">${formatMoney(i.lineTotal, d.currency)}</td></tr>`
     )
     .join("");
+  const licenseBlock = (d.licenses ?? []).length
+    ? `<div style="margin-top:16px;padding:14px;border:1px dashed #16a34a;border-radius:12px">
+        <p style="margin:0 0 6px;font-weight:700;color:#16a34a">Tus códigos / licencias</p>
+        ${(d.licenses ?? []).map((l) => `<p style="margin:2px 0;font-size:13px"><b>${l.product}:</b> ${l.codes.map((c) => `<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px">${c}</code>`).join(" ")}</p>`).join("")}
+      </div>`
+    : "";
   const html = `
   <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:auto;color:#0f172a">
     <div style="background:linear-gradient(135deg,#16a34a,#0ea5e9);height:8px;border-radius:8px 8px 0 0"></div>
@@ -63,6 +70,7 @@ export function orderConfirmationEmail(d: OrderEmailData): { subject: string; ht
         <tr><td style="padding-top:12px;border-top:1px solid #e2e8f0;font-weight:700">Total</td>
         <td style="padding-top:12px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700">${formatMoney(d.total, d.currency)}</td></tr>
       </table>
+      ${licenseBlock}
       ${d.storeUrl ? `<a href="${d.storeUrl}" style="display:inline-block;margin-top:20px;background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:600">Ver tienda</a>` : ""}
       <p style="color:#94a3b8;font-size:12px;margin-top:24px">Recibirás novedades de tu pedido por WhatsApp.</p>
     </div>

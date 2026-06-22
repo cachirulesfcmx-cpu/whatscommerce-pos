@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { MessageCircle, Store as StoreIcon, BadgeCheck, Star, MapPin, Clock, Instagram, Facebook } from "lucide-react";
+import { MessageCircle, Store as StoreIcon, BadgeCheck, Star, MapPin, Clock, Instagram, Facebook, Search } from "lucide-react";
 import { ProductCard, type StoreProduct } from "@/components/store/product-card";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { ProductSheet } from "@/components/store/product-sheet";
@@ -28,6 +28,8 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
   const setStore = useCart((s) => s.setStore);
   const [activeCat, setActiveCat] = React.useState<string | null>(null);
   const [active, setActive] = React.useState<StoreProduct | null>(null);
+  const [query, setQuery] = React.useState("");
+  const [sort, setSort] = React.useState<"relevance" | "price-asc" | "price-desc">("relevance");
   const tpl = getTemplate(store.templateKey);
   const accent = store.primaryColor || tpl.accent;
   const t = getDict(store.locale);
@@ -40,9 +42,15 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
     setStore(store.id);
   }, [store.id, setStore]);
 
-  const products = activeCat
-    ? store.products.filter((p) => p.categoryId === activeCat)
-    : store.products;
+  const products = React.useMemo(() => {
+    let list = store.products;
+    if (activeCat) list = list.filter((p) => p.categoryId === activeCat);
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q));
+    if (sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
+    else if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
+    return list;
+  }, [store.products, activeCat, query, sort]);
 
   const heroHeight = tpl.hero === "minimal" ? "h-24 sm:h-32" : "h-40 sm:h-56";
 
@@ -102,9 +110,31 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
         </div>
       </header>
 
+      {/* search + sort */}
+      <div className="container mt-6 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t.search}
+            className="h-10 w-full rounded-full border border-border bg-background pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as typeof sort)}
+          className="h-10 rounded-full border border-border bg-background px-3 text-sm"
+        >
+          <option value="relevance">{t.featured}</option>
+          <option value="price-asc">Precio: menor a mayor</option>
+          <option value="price-desc">Precio: mayor a menor</option>
+        </select>
+      </div>
+
       {/* category filter (sticky) */}
       {store.categories.length > 0 && (
-        <div className="sticky top-0 z-20 mt-6 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div className="sticky top-0 z-20 mt-3 border-b border-border/60 bg-background/80 backdrop-blur-xl">
           <div className="container flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setActiveCat(null)}
@@ -159,6 +189,8 @@ export function Storefront({ store, demo = false }: { store: StorefrontDTO; demo
         currency={store.currency}
         accent={accent}
         dict={t}
+        storeId={store.id}
+        demo={demo}
         onClose={() => setActive(null)}
         onOpen={setActive}
       />

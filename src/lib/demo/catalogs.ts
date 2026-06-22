@@ -377,6 +377,10 @@ export function demoToStorefrontDTO(demo: DemoStore) {
       isFeatured: p.featured ?? false,
       image: p.image,
       images: [p.image],
+      instagramUrls: [] as string[],
+      reviews: [] as { customerName: string; rating: number; comment: string | null; createdAt: string }[],
+      ratingAvg: 4.8 as number | null,
+      ratingCount: 24,
       variants: (p.variants ?? []).map((v, vi) => ({
         id: `demovar-${i}-${vi}`,
         name: v.name,

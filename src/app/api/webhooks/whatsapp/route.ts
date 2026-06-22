@@ -1,6 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyWhatsAppSignature } from "@/lib/whatsapp";
+import { normalizePhone } from "@/lib/utils";
+
+interface WaPayload {
+  entry?: {
+    changes?: {
+      value?: {
+        metadata?: { display_phone_number?: string };
+        contacts?: { profile?: { name?: string }; wa_id?: string }[];
+        messages?: { from?: string; text?: { body?: string }; type?: string }[];
+      };
+    }[];
+  }[];
+}
+
+/** Route inbound WhatsApp text messages into the store inbox (best-effort). */
+async function ingestInbound(payload: WaPayload) {
+  for (const entry of payload.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      const value = change.value;
+      const businessPhone = value?.metadata?.display_phone_number;
+      const messages = value?.messages ?? [];
+      if (!businessPhone || messages.length === 0) continue;
+
+      const wa = await prisma.whatsAppSettings.findFirst({
+        where: { phone: normalizePhone(businessPhone) },
+        select: { storeId: true },
+      });
+      if (!wa) continue;
+
+      const contactName = value?.contacts?.[0]?.profile?.name ?? null;
+      for (const m of messages) {
+        const body = m.text?.body;
+        if (!body || !m.from) continue;
+        const handle = normalizePhone(m.from);
+        let conv = await prisma.conversation.findFirst({
+          where: { storeId: wa.storeId, channel: "WHATSAPP", customerHandle: handle },
+        });
+        if (!conv) {
+          conv = await prisma.conversation.create({
+            data: { storeId: wa.storeId, channel: "WHATSAPP", customerHandle: handle, customerName: contactName },
+          });
+        }
+        await prisma.message.create({ data: { conversationId: conv.id, direction: "IN", text: body } });
+        await prisma.conversation.update({
+          where: { id: conv.id },
+          data: { lastMessageAt: new Date(), status: "OPEN", ...(contactName && !conv.customerName ? { customerName: contactName } : {}) },
+        });
+      }
+    }
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +90,8 @@ export async function POST(req: NextRequest) {
     data: { provider: "whatsapp", eventId, type: "inbound", payload: payload as object, processedAt: new Date() },
   });
 
-  // TODO (Fase 3): route inbound messages to conversations / automations.
+  // Route inbound messages to the store inbox (best-effort).
+  await ingestInbound(payload as WaPayload).catch(() => {});
+
   return NextResponse.json({ received: true });
 }

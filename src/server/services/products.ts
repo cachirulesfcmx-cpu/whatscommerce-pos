@@ -36,6 +36,7 @@ export async function createProduct(storeId: string, input: ProductInput) {
       isActive: input.isActive,
       isFeatured: input.isFeatured,
       tags: input.tags,
+      instagramUrls: input.instagramUrls ?? [],
       seoTitle: input.seoTitle ?? null,
       seoDescription: input.seoDescription ?? null,
       images: { create: input.images.map((im, i) => ({ url: im.url, alt: im.alt, sortOrder: im.sortOrder ?? i })) },
@@ -53,6 +54,8 @@ export async function createProduct(storeId: string, input: ProductInput) {
     },
     include: { variants: true },
   });
+
+  await addLicenseCodes(storeId, product.id, input.licenseCodes ?? []);
 
   // initial inventory
   if (input.trackInventory) {
@@ -105,6 +108,7 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
       isActive: input.isActive,
       isFeatured: input.isFeatured,
       tags: input.tags,
+      instagramUrls: input.instagramUrls ?? [],
       seoTitle: input.seoTitle ?? null,
       seoDescription: input.seoDescription ?? null,
       images: { create: input.images.map((im, i) => ({ url: im.url, alt: im.alt, sortOrder: im.sortOrder ?? i })) },
@@ -119,7 +123,30 @@ export async function updateProduct(storeId: string, id: string, input: ProductI
     },
   });
 
+  await addLicenseCodes(storeId, product.id, input.licenseCodes ?? []);
+
   return product;
+}
+
+/** Add new AVAILABLE license keys for a digital product, skipping duplicates. */
+async function addLicenseCodes(storeId: string, productId: string, codes: string[]) {
+  const clean = Array.from(new Set(codes.map((c) => c.trim()).filter(Boolean)));
+  if (clean.length === 0) return;
+  const existing = await prisma.licenseKey.findMany({
+    where: { productId, code: { in: clean } },
+    select: { code: true },
+  });
+  const have = new Set(existing.map((e) => e.code));
+  const toCreate = clean.filter((c) => !have.has(c));
+  if (toCreate.length === 0) return;
+  await prisma.licenseKey.createMany({
+    data: toCreate.map((code) => ({ storeId, productId, code })),
+  });
+}
+
+/** Count available license keys per product (for the dashboard). */
+export async function availableLicenseCount(productId: string) {
+  return prisma.licenseKey.count({ where: { productId, status: "AVAILABLE" } });
 }
 
 export async function listProducts(storeId: string) {

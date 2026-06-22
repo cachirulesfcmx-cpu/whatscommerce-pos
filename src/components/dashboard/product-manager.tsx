@@ -34,6 +34,8 @@ interface ProductDTO {
   isActive: boolean;
   isFeatured: boolean;
   tags: string[];
+  instagramUrls: string[];
+  licenseCodes: string[];
   images: { url: string; alt: string; sortOrder: number }[];
   variants: { name: string; price: number | null; options: { type: string; value: string }[] }[];
   stock: number;
@@ -42,7 +44,7 @@ interface ProductDTO {
 const empty: ProductDTO = {
   id: "", name: "", description: "", type: "PHYSICAL", categoryId: null, categoryName: null,
   price: 0, compareAtPrice: null, sku: "", trackInventory: false, isActive: true,
-  isFeatured: false, tags: [], images: [], variants: [], stock: 0,
+  isFeatured: false, tags: [], instagramUrls: [], licenseCodes: [], images: [], variants: [], stock: 0,
 };
 
 export function ProductManager({
@@ -92,7 +94,7 @@ export function ProductManager({
   }
   function openEdit(p: ProductDTO) {
     setEditing(p);
-    setForm({ ...p });
+    setForm({ ...empty, ...p, licenseCodes: [] });
     setOpen(true);
   }
 
@@ -115,6 +117,8 @@ export function ProductManager({
       isActive: form.isActive,
       isFeatured: form.isFeatured,
       tags: form.tags,
+      instagramUrls: form.instagramUrls,
+      licenseCodes: form.licenseCodes,
       images: form.images.filter((i) => i.url),
       variants: form.variants.map((v) => ({ name: v.name, price: v.price, options: v.options })),
       modifierIds: [],
@@ -305,6 +309,30 @@ export function ProductManager({
                 onChange={(e) => set("tags", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Posts de Instagram (una URL por línea)</Label>
+              <Textarea
+                rows={2}
+                placeholder="https://instagram.com/p/..."
+                value={form.instagramUrls.join("\n")}
+                onChange={(e) => set("instagramUrls", e.target.value.split("\n").map((u) => u.trim()).filter(Boolean))}
+              />
+              <p className="text-xs text-muted-foreground">Se muestran en la ficha del producto para dar confianza.</p>
+            </div>
+
+            {form.type === "DIGITAL" && (
+              <div className="space-y-2">
+                <Label>Códigos de licencia (uno por línea)</Label>
+                <Textarea
+                  rows={3}
+                  placeholder={"LICENCIA-0001\nLICENCIA-0002"}
+                  value={form.licenseCodes.join("\n")}
+                  onChange={(e) => set("licenseCodes", e.target.value.split("\n").map((c) => c.trim()).filter(Boolean))}
+                />
+                <p className="text-xs text-muted-foreground">Se asignan automáticamente a cada pedido confirmado y se muestran al cliente.</p>
+              </div>
+            )}
 
             {features.inventory && (
               <div className="flex items-center justify-between rounded-xl border p-3">

@@ -31,7 +31,7 @@ export function CheckoutForm({
   const subtotal = useCart((s) => s.subtotal());
 
   const [loading, setLoading] = React.useState(false);
-  const [success, setSuccess] = React.useState<{ number: string; waLink: string | null } | null>(null);
+  const [success, setSuccess] = React.useState<{ number: string; waLink: string | null; licenses?: { product: string; codes: string[] }[] } | null>(null);
   const [delivery, setDelivery] = React.useState(deliveryMethods[0]?.method ?? "PICKUP");
   const [paymentIdx, setPaymentIdx] = React.useState(0);
   const payment = paymentMethods[paymentIdx]?.method ?? "CASH";
@@ -125,7 +125,7 @@ export function CheckoutForm({
       return;
     }
     clear();
-    setSuccess({ number: json.data.number, waLink: json.data.waLink });
+    setSuccess({ number: json.data.number, waLink: json.data.waLink, licenses: json.data.licenses });
     // auto-open WhatsApp
     if (json.data.waLink) window.open(json.data.waLink, "_blank");
   }
@@ -138,6 +138,14 @@ export function CheckoutForm({
         <p className="mt-1 text-muted-foreground">
           <span className="font-semibold">#{success.number}</span> {t.orderCreated}
         </p>
+        {success.licenses && success.licenses.length > 0 && (
+          <div className="mt-5 w-full rounded-2xl border border-dashed border-emerald-400 p-4 text-left">
+            <p className="text-sm font-semibold text-emerald-600">Tus códigos / licencias</p>
+            {success.licenses.map((l, i) => (
+              <p key={i} className="mt-1 text-sm"><span className="font-medium">{l.product}:</span> {l.codes.map((c) => <code key={c} className="mx-0.5 rounded bg-muted px-1.5 py-0.5 text-xs">{c}</code>)}</p>
+            ))}
+          </div>
+        )}
         {success.waLink && (
           <Button asChild className="mt-6 w-full bg-[#25D366] text-white hover:bg-[#1eb959]">
             <a href={success.waLink} target="_blank" rel="noreferrer">

@@ -35,6 +35,8 @@ export const productSchema = z.object({
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
+  instagramUrls: z.array(z.string().url()).default([]),
+  licenseCodes: z.array(z.string().min(1)).default([]), // digital products: available license keys to add
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   images: z.array(productImageSchema).default([]),

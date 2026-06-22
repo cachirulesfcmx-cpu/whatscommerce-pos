@@ -246,6 +246,23 @@ export async function createOrder({ storeId, input, channel, assignedToId }: Cre
 
   await incrementUsage(storeId, "orders", 1);
 
+  // Digital products: auto-assign available license keys to this order.
+  const assignedLicenses: { product: string; codes: string[] }[] = [];
+  for (const li of lineItems) {
+    if (li.product.type !== "DIGITAL") continue;
+    const available = await prisma.licenseKey.findMany({
+      where: { productId: li.productId, status: "AVAILABLE" },
+      take: li.quantity,
+      select: { id: true, code: true },
+    });
+    if (available.length === 0) continue;
+    await prisma.licenseKey.updateMany({
+      where: { id: { in: available.map((a) => a.id) } },
+      data: { status: "ASSIGNED", orderId: order.id, assignedAt: new Date() },
+    });
+    assignedLicenses.push({ product: li.name, codes: available.map((a) => a.code) });
+  }
+
   // mark the originating cart as recovered (for conversion analytics)
   if (input.cartToken) {
     await prisma.cart
@@ -287,9 +304,10 @@ export async function createOrder({ storeId, input, channel, assignedToId }: Cre
       items: lineItems.map((li) => ({ name: li.name, quantity: li.quantity, lineTotal: li.lineTotal })),
       total,
       storeUrl: `${env.NEXT_PUBLIC_APP_URL}/store/${store.slug}`,
+      licenses: assignedLicenses,
     });
     sendEmail({ to: input.customer.email, subject: mail.subject, html: mail.html }).catch(() => {});
   }
 
-  return { order, ticket, waLink };
+  return { order, ticket, waLink, licenses: assignedLicenses };
 }

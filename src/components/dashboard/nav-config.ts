@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, ShoppingCart, Boxes, Tags, Users, Ticket,
-  BarChart3, Palette, Settings, CreditCard, MonitorSmartphone, Wallet, KeyRound, ShoppingBag,
+  BarChart3, Palette, Settings, CreditCard, MonitorSmartphone, Wallet, KeyRound, ShoppingBag, Bot, Inbox,
 } from "lucide-react";
 import type { FeatureKey } from "@/lib/plans/plans";
 import type { Permission } from "@/lib/auth/rbac";
@@ -22,6 +22,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Clientes", href: "/dashboard/customers", icon: Users, permission: "customers:view", feature: "customers" },
   { label: "Cupones", href: "/dashboard/coupons", icon: Ticket, permission: "coupons:view", feature: "coupons" },
   { label: "Carritos", href: "/dashboard/carts", icon: ShoppingBag, permission: "orders:view", feature: "cartRecovery" },
+  { label: "Inbox", href: "/dashboard/inbox", icon: Inbox, permission: "orders:view" },
+  { label: "Chatbot", href: "/dashboard/chatbot", icon: Bot, permission: "settings:view", feature: "whatsappAutomation" },
   { label: "Reportes", href: "/dashboard/reports", icon: BarChart3, permission: "reports:view", feature: "reports" },
   { label: "Editor de tienda", href: "/dashboard/settings/store", icon: Palette, permission: "settings:view" },
   { label: "Pagos", href: "/dashboard/payments", icon: Wallet, permission: "orders:view" },

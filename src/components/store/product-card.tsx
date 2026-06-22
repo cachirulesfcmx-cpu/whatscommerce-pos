@@ -1,12 +1,20 @@
 "use client";
 import * as React from "react";
-import { Plus, ImageIcon } from "lucide-react";
+import { Plus, ImageIcon, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, cn } from "@/lib/utils";
 import { useCart } from "@/store/cart";
+import { useWishlist } from "@/store/wishlist";
 import { useToast } from "@/hooks/use-toast";
+
+export interface ProductReview {
+  customerName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
 
 export interface StoreProduct {
   id: string;
@@ -19,6 +27,10 @@ export interface StoreProduct {
   image: string | null;
   variants: { id: string; name: string; price: number | null }[];
   extras: { name: string; price: number }[];
+  instagramUrls?: string[];
+  reviews?: ProductReview[];
+  ratingAvg?: number | null;
+  ratingCount?: number;
 }
 
 export function ProductCard({
@@ -31,6 +43,8 @@ export function ProductCard({
   onOpen?: (p: StoreProduct) => void;
 }) {
   const addLine = useCart((s) => s.addLine);
+  const wishlisted = useWishlist((s) => s.ids.includes(product.id));
+  const toggleWish = useWishlist((s) => s.toggle);
   const { toast } = useToast();
   const [variantId, setVariantId] = React.useState<string | null>(
     product.variants[0]?.id ?? null
@@ -82,6 +96,13 @@ export function ProductCard({
         {product.compareAtPrice && product.compareAtPrice > price && (
           <Badge variant="destructive" className="absolute left-2 top-2">Oferta</Badge>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleWish(product.id); }}
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-transform active:scale-90"
+          aria-label="Favorito"
+        >
+          <Heart className={cn("h-4 w-4", wishlisted ? "fill-rose-500 text-rose-500" : "text-muted-foreground")} />
+        </button>
       </div>
       <div className="flex flex-1 flex-col p-3">
         <h3 className="line-clamp-1 cursor-pointer font-semibold hover:underline" onClick={() => onOpen?.(product)}>{product.name}</h3>
