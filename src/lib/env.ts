@@ -28,7 +28,16 @@ const schema = z.object({
   // Secret guarding scheduled jobs (cart recovery, etc.). Sent as
   // `Authorization: Bearer <CRON_SECRET>` or `?secret=` by the scheduler.
   CRON_SECRET: z.string().optional(),
+
+  // Platform-wide WhatsApp Web (QR) bridge — deploy once, serves every store.
+  WA_BRIDGE_URL: z.string().optional(),
+  WA_BRIDGE_ADMIN_TOKEN: z.string().optional(),
 });
+
+/** True when a platform-managed QR bridge is configured (stores need no setup). */
+export const isManagedBridgeEnabled = Boolean(
+  typeof window === "undefined" && process.env.WA_BRIDGE_URL && process.env.WA_BRIDGE_ADMIN_TOKEN
+);
 
 // On the client, only NEXT_PUBLIC_* are present; skip strict parsing there.
 const isServer = typeof window === "undefined";

@@ -33,11 +33,12 @@ interface ProfileData {
 }
 
 export function SettingsPanel({
-  defaultTab = "general", store, whatsapp, storeSlug, storeId, profile,
+  defaultTab = "general", store, whatsapp, storeSlug, storeId, profile, bridgeManaged = false,
 }: {
   defaultTab?: string;
   storeSlug?: string;
   storeId?: string;
+  bridgeManaged?: boolean;
   store: { name: string; description: string | null; logoUrl: string | null; bannerUrl: string | null; primaryColor: string; templateKey: string; locale?: string | null; seoTitle: string | null; seoDescription: string | null };
   whatsapp: { phone: string | null; displayName: string | null; notifyCustomer: boolean; templates?: Record<string, string>; mode?: string | null; bridgeUrl?: string | null; bridgeToken?: string | null; bridgeStatus?: string | null };
   profile?: ProfileData;
@@ -307,28 +308,34 @@ export function SettingsPanel({
 
               {wa.mode === "qr" && (
                 <div className="mt-2 space-y-3 rounded-xl border border-dashed p-4">
-                  <p className="text-xs text-muted-foreground">
-                    Despliega el <code className="rounded bg-muted px-1">bridge</code> (carpeta del proyecto) en un servicio always-on (Railway/Render/VPS) y pega aquí su URL y token.
-                  </p>
-                  {storeId && (
-                    <div className="space-y-1"><Label className="text-xs">STORE_ID (cópialo al bridge)</Label>
-                      <Input readOnly value={storeId} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
-                    </div>
+                  {bridgeManaged ? (
+                    <p className="text-xs text-muted-foreground">Conecta tu WhatsApp escaneando un código QR. No necesitas configurar nada técnico.</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Modo avanzado: despliega el <code className="rounded bg-muted px-1">bridge</code> en un servicio always-on (Railway/Render/VPS) y pega su URL y token.
+                      </p>
+                      {storeId && (
+                        <div className="space-y-1"><Label className="text-xs">STORE_ID (cópialo al bridge)</Label>
+                          <Input readOnly value={storeId} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
+                        </div>
+                      )}
+                      <div className="space-y-1"><Label className="text-xs">URL del bridge</Label>
+                        <Input value={wa.bridgeUrl} onChange={(e) => setWa({ ...wa, bridgeUrl: e.target.value })} placeholder="https://mi-bridge.up.railway.app" />
+                      </div>
+                      <div className="space-y-1"><Label className="text-xs">Token del bridge (BRIDGE_TOKEN)</Label>
+                        <Input value={wa.bridgeToken} onChange={(e) => setWa({ ...wa, bridgeToken: e.target.value })} placeholder="secreto-compartido" />
+                      </div>
+                    </>
                   )}
-                  <div className="space-y-1"><Label className="text-xs">URL del bridge</Label>
-                    <Input value={wa.bridgeUrl} onChange={(e) => setWa({ ...wa, bridgeUrl: e.target.value })} placeholder="https://mi-bridge.up.railway.app" />
-                  </div>
-                  <div className="space-y-1"><Label className="text-xs">Token del bridge (BRIDGE_TOKEN)</Label>
-                    <Input value={wa.bridgeToken} onChange={(e) => setWa({ ...wa, bridgeToken: e.target.value })} placeholder="secreto-compartido" />
-                  </div>
                   <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={async () => { await saveWa(); setQrPolling(true); }}>
-                      Guardar y conectar
+                      {bridgeManaged ? "Conectar por QR" : "Guardar y conectar"}
                     </Button>
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
                       qr?.status === "connected" ? "bg-emerald-100 text-emerald-700" :
                       qr?.status === "qr" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>
-                      {qr?.status === "connected" ? "Conectado ✅" : qr?.status === "qr" ? "Escanea el QR" : qr?.status === "error" ? "Bridge no responde" : "Desconectado"}
+                      {qr?.status === "connected" ? "Conectado ✅" : qr?.status === "qr" ? "Escanea el QR" : qr?.status === "error" ? "Servicio no disponible" : "Desconectado"}
                     </span>
                   </div>
                   {qr?.qr && qr.status === "qr" && (

@@ -6,23 +6,44 @@ import { runFlow, type FlowState } from "@/lib/chatbot/engine";
 import { aiComplete } from "@/lib/ai";
 
 /**
+ * Resolve the QR bridge to use for a store:
+ * - Platform-managed bridge (WA_BRIDGE_URL/ADMIN_TOKEN) → store-scoped path. Zero
+ *   setup per store; the store just pairs by QR from its dashboard.
+ * - Otherwise fall back to a self-hosted per-store bridge (bridgeUrl/bridgeToken).
+ */
+export function resolveBridge(wa: { bridgeUrl?: string | null; bridgeToken?: string | null } | null, storeId: string) {
+  const managedUrl = process.env.WA_BRIDGE_URL;
+  const managedToken = process.env.WA_BRIDGE_ADMIN_TOKEN;
+  if (managedUrl && managedToken) {
+    return { base: `${managedUrl.replace(/\/$/, "")}/sessions/${storeId}`, token: managedToken };
+  }
+  if (wa?.bridgeUrl && wa.bridgeToken) {
+    return { base: wa.bridgeUrl.replace(/\/$/, ""), token: wa.bridgeToken };
+  }
+  return null;
+}
+
+/**
  * Send a WhatsApp message using the store's configured transport:
- * - "qr"   → POST to the WhatsApp Web bridge microservice
+ * - "qr"   → POST to the WhatsApp Web bridge (managed or self-hosted)
  * - "cloud"→ Meta Cloud API (env-configured)
  * - else   → wa.me deep link (returned for the client to open)
  */
 export async function sendWhatsAppForStore(storeId: string, to: string, text: string) {
   const wa = await prisma.whatsAppSettings.findUnique({ where: { storeId } });
-  if (wa?.mode === "qr" && wa.bridgeUrl && wa.bridgeToken) {
-    try {
-      const res = await fetch(`${wa.bridgeUrl.replace(/\/$/, "")}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-bridge-token": wa.bridgeToken },
-        body: JSON.stringify({ to: normalizePhone(to), text }),
-      });
-      return { ok: res.ok, channel: "qr-web" as const };
-    } catch {
-      return { ok: false, channel: "qr-web" as const };
+  if (wa?.mode === "qr") {
+    const bridge = resolveBridge(wa, storeId);
+    if (bridge) {
+      try {
+        const res = await fetch(`${bridge.base}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-bridge-token": bridge.token },
+          body: JSON.stringify({ to: normalizePhone(to), text }),
+        });
+        return { ok: res.ok, channel: "qr-web" as const };
+      } catch {
+        return { ok: false, channel: "qr-web" as const };
+      }
     }
   }
   return sendWhatsApp(to, text);

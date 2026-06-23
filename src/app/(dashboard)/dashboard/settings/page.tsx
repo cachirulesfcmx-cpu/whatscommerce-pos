@@ -1,6 +1,7 @@
 import { getDashboardContext } from "@/server/dashboard";
 import { prisma } from "@/lib/prisma";
 import { SettingsPanel } from "@/components/dashboard/settings-panel";
+import { isManagedBridgeEnabled } from "@/lib/env";
 
 export const metadata = { title: "Configuración" };
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export default async function SettingsPage() {
     <SettingsPanel
       storeSlug={store.slug}
       storeId={store.id}
+      bridgeManaged={isManagedBridgeEnabled}
       store={{ name: store.name, description: store.description, logoUrl: store.logoUrl, bannerUrl: store.bannerUrl, primaryColor: store.primaryColor, templateKey: store.templateKey, locale: store.locale, seoTitle: store.seoTitle, seoDescription: store.seoDescription }}
       whatsapp={{ phone: wa?.phone ?? null, displayName: wa?.displayName ?? null, notifyCustomer: wa?.notifyCustomer ?? false, templates: (wa?.templates as Record<string, string>) ?? {}, mode: wa?.mode ?? "link", bridgeUrl: wa?.bridgeUrl ?? null, bridgeToken: wa?.bridgeToken ?? null, bridgeStatus: wa?.bridgeStatus ?? null }}
       profile={{

@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
 
   const wa = await prisma.whatsAppSettings.findUnique({ where: { storeId } });
   const token = req.headers.get("x-bridge-token");
-  if (!wa?.bridgeToken || token !== wa.bridgeToken) {
+  const managedToken = process.env.WA_BRIDGE_ADMIN_TOKEN;
+  const authorized = (managedToken && token === managedToken) || (wa?.bridgeToken && token === wa.bridgeToken);
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

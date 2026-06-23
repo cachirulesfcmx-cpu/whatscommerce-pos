@@ -1,77 +1,78 @@
-# WhatsCommerce — WhatsApp Web (QR) bridge
+# WhatsCommerce — WhatsApp Web (QR) bridge · multi-tenant
 
-Conecta **un número de WhatsApp por QR** (como WhatsApp Web, usando Baileys) y
-enlaza los mensajes con tu app WhatsCommerce. Así el **chatbot, el inbox y los
-disparadores** funcionan **sin la API oficial de Meta**.
+Conecta números de WhatsApp **por QR** (como WhatsApp Web, usando Baileys) para
+que el **chatbot, el inbox y los disparadores** funcionen **sin la API oficial**.
 
-> ⚠️ **Aviso:** este es un canal **no oficial**. Va contra los Términos de
-> WhatsApp y existe riesgo de que **baneen el número**, especialmente con envíos
-> automatizados o masivos. Para producción seria se recomienda la Cloud API.
-> No corre en Vercel: necesita un **servicio always-on** (Railway, Render, Fly.io
-> o un VPS con Docker) que mantenga viva la sesión.
+Se **despliega UNA sola vez para toda la plataforma**. Maneja **muchas sesiones a
+la vez, una por tienda** (separadas por `storeId`). Cada dueño solo pulsa
+**"Conectar por QR"** en su dashboard y escanea — **sin variables por tienda**.
+
+> ⚠️ Canal **no oficial**: va contra los Términos de WhatsApp; riesgo de **baneo**
+> del número (mayor con envíos masivos). No corre en Vercel: necesita un servicio
+> **always-on** (Railway/Render/Fly.io/VPS) con un **volumen** persistente.
 
 ## Cómo funciona
 
 ```
-Cliente WhatsApp  ⇄  (Baileys, QR)  ⇄  Bridge  ⇄  /api/webhooks/whatsapp-web  ⇄  App (chatbot + inbox)
+Cliente WhatsApp ⇄ (Baileys, QR, 1 sesión por tienda) ⇄ Bridge ⇄ /api/webhooks/whatsapp-web ⇄ App
 ```
 
-- El bridge genera el **QR**; lo escaneas con *WhatsApp → Dispositivos vinculados*.
-- Cada mensaje entrante se reenvía al webhook de la app, que ejecuta el flujo y
-  responde llamando a `POST /send` del bridge.
-- La sesión se guarda en `AUTH_DIR` — **monta un volumen** para no re-escanear.
+- La app pide al bridge iniciar/leer la sesión de una tienda por su `storeId`.
+- El bridge devuelve el **QR**; el dueño lo escanea desde su panel.
+- Cada mensaje entrante se reenvía al webhook de la app (con el `storeId`), que
+  ejecuta el flujo y responde llamando a `POST /sessions/:storeId/send`.
+- Las sesiones se guardan en `AUTH_DIR/<storeId>` y se **restauran al reiniciar**.
 
-## Variables de entorno
-
-Copia `.env.example` → `.env` y llena:
+## Variables (solo 2 + volumen)
 
 | Variable | Descripción |
 |---|---|
-| `APP_URL` | URL pública de tu app (p. ej. `https://tu-tienda.vercel.app`) |
-| `BRIDGE_TOKEN` | Secreto compartido (el mismo en el dashboard) |
-| `STORE_ID` | ID de la tienda (lo ves en el panel de QR) |
-| `PORT` | Puerto (por defecto 8080) |
-| `AUTH_DIR` | Carpeta de sesión persistente (volumen) |
+| `APP_URL` | URL pública de la app (ej. `https://tu-tienda.vercel.app`) |
+| `ADMIN_TOKEN` | Secreto de plataforma. En la app va como `WA_BRIDGE_ADMIN_TOKEN` |
+| `AUTH_DIR` | Raíz de sesiones (monta un volumen, ej. `/app/auth`) |
 
-## Correr local
+En la **app** configura (una sola vez, en Vercel → Environment Variables):
 
-```bash
-cd bridge
-npm install
-APP_URL=http://localhost:3000 BRIDGE_TOKEN=secreto STORE_ID=tu_store_id npm start
+```
+WA_BRIDGE_URL=https://tu-bridge.up.railway.app
+WA_BRIDGE_ADMIN_TOKEN=el-mismo-ADMIN_TOKEN
 ```
 
-## Docker
+Con eso, **todas las tiendas** ya pueden conectar por QR desde su dashboard sin
+configurar nada.
+
+## Desplegar en Railway/Render
+
+1. New Project → Deploy from GitHub repo → elige el repo.
+2. **Root Directory** = `bridge` (usa el Dockerfile).
+3. Variables: `APP_URL`, `ADMIN_TOKEN`.
+4. **Volumen** montado en `/app/auth`.
+5. Copia la **URL pública** y ponla en la app como `WA_BRIDGE_URL`.
+
+## Docker (local/VPS)
 
 ```bash
 docker build -t wa-bridge ./bridge
 docker run -p 8080:8080 \
   -e APP_URL=https://tu-tienda.vercel.app \
-  -e BRIDGE_TOKEN=secreto \
-  -e STORE_ID=tu_store_id \
+  -e ADMIN_TOKEN=secreto \
   -v $(pwd)/auth:/app/auth \
   wa-bridge
 ```
 
-## Railway / Render
+## Endpoints (auth: `x-bridge-token: ADMIN_TOKEN`)
 
-1. Crea un servicio nuevo apuntando a la carpeta `bridge/` (o este Dockerfile).
-2. Configura las variables `APP_URL`, `BRIDGE_TOKEN`, `STORE_ID`.
-3. Añade un **volumen** montado en `/app/auth` (persistencia de la sesión).
-4. Copia la **URL pública** del servicio.
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/health` | Healthcheck (sin auth) |
+| POST | `/sessions/:storeId/start` | Inicia/asegura la sesión |
+| GET | `/sessions/:storeId/qr` | `{ status, qr }` |
+| GET | `/sessions/:storeId/status` | `{ status }` |
+| POST | `/sessions/:storeId/send` | Enviar `{ to, text }` |
+| POST | `/sessions/:storeId/logout` | Desvincular el número |
 
-## Conectar en el dashboard
+## Escalado
 
-1. Ve a **Configuración → WhatsApp**, elige modo **QR**.
-2. Pega la **URL del bridge** y el **BRIDGE_TOKEN**, guarda.
-3. Pulsa **Conectar** y **escanea el QR** con tu teléfono.
-4. Cuando el estado sea **Conectado**, el bot responde solo por ese número.
-
-## Endpoints
-
-| Método | Ruta | Auth | Descripción |
-|---|---|---|---|
-| GET | `/health` | — | Healthcheck |
-| GET | `/status` | token | `{ status }` |
-| GET | `/qr` | token | `{ status, qr }` (data URL al vincular) |
-| POST | `/send` | token | Enviar `{ to, text }` |
+Un proceso sostiene muchas sesiones (suficiente para decenas/cientos). Para
+escalar más, replica el bridge y reparte tiendas por instancia (sharding por
+`storeId`), o usa varias instancias con almacenamiento de sesión compartido.
